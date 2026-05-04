@@ -1,6 +1,7 @@
 import LearningModels
 import LearningUI
 import SwiftUI
+import Textual
 
 struct ReflectionBlockView: View {
     let payload: BlockPayload.Reflection
@@ -13,7 +14,7 @@ struct ReflectionBlockView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(theme.text.tertiary)
                 .tracking(1.2)
-            Text(payload.prompt)
+            InlineText(markdown: payload.prompt, syntaxExtensions: [.math])
                 .font(.body)
                 .foregroundStyle(theme.text.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)

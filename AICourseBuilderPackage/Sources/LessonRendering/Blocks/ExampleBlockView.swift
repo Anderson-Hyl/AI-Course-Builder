@@ -1,6 +1,7 @@
 import LearningModels
 import LearningUI
 import SwiftUI
+import Textual
 
 struct ExampleBlockView: View {
     let payload: BlockPayload.Example
@@ -15,7 +16,7 @@ struct ExampleBlockView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             if let prose = payload.prose {
-                Text(prose)
+                StructuredText(markdown: prose, syntaxExtensions: [.math])
                     .font(.body)
                     .foregroundStyle(theme.text.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)

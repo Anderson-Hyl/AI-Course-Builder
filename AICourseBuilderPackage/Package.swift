@@ -25,6 +25,12 @@ let package = Package(
         .package(url: "https://github.com/pointfreeco/swift-composable-architecture", from: "1.0.0"),
         .package(url: "https://github.com/pointfreeco/sqlite-data", from: "1.0.0"),
         .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.0.0"),
+        // Markdown + LaTeX math rendering for `Concept.body`, `Example.prose`,
+        // and other body fields. Spiritual successor to swift-markdown-ui by
+        // the same author; native rendering (no WebView), MIT licensed.
+        // Math via `$...$` (inline) and `$$...$$` (block) when the `.math`
+        // syntax extension is passed.
+        .package(url: "https://github.com/gonzalezreal/textual", from: "0.3.0"),
     ],
     targets: [
         .target(
@@ -52,13 +58,16 @@ let package = Package(
         ),
         .target(
             name: "LearningUI",
-            dependencies: []
+            dependencies: [
+                .product(name: "Textual", package: "textual"),
+            ]
         ),
         .target(
             name: "LessonRendering",
             dependencies: [
                 "LearningModels",
                 "LearningUI",
+                .product(name: "Textual", package: "textual"),
             ]
         ),
         .target(

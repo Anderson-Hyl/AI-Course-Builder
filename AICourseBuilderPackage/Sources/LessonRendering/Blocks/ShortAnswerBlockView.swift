@@ -1,6 +1,7 @@
 import LearningModels
 import LearningUI
 import SwiftUI
+import Textual
 
 struct ShortAnswerBlockView: View {
     let payload: BlockPayload.ShortAnswer
@@ -9,7 +10,7 @@ struct ShortAnswerBlockView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(payload.question)
+            InlineText(markdown: payload.question, syntaxExtensions: [.math])
                 .font(.headline)
                 .foregroundStyle(theme.text.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)

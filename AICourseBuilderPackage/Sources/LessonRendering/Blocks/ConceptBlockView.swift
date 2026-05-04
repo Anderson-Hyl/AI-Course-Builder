@@ -1,6 +1,7 @@
 import LearningModels
 import LearningUI
 import SwiftUI
+import Textual
 
 struct ConceptBlockView: View {
     let payload: BlockPayload.Concept
@@ -14,7 +15,7 @@ struct ConceptBlockView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             if let callout = payload.callout {
-                Text(callout)
+                InlineText(markdown: callout, syntaxExtensions: [.math])
                     .font(.callout)
                     .foregroundStyle(theme.text.secondary)
                     .padding(14)
@@ -25,8 +26,7 @@ struct ConceptBlockView: View {
                     )
             }
 
-            // TODO: real Markdown via AttributedString in a future pass.
-            Text(payload.body)
+            StructuredText(markdown: payload.body, syntaxExtensions: [.math])
                 .font(.body)
                 .foregroundStyle(theme.text.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)

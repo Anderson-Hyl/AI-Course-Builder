@@ -124,14 +124,20 @@ enum Fixtures {
         block(
             id: 0xB2, sessionID: mathSessionID, order: 2, kind: BlockKind.objective,
             payload: BlockPayload.Objective(
-                statement: "Use a² + b² = c² to find the unknown side length of a right triangle."
+                statement: "Use the Pythagorean Theorem to find the unknown side length of a right triangle."
             )
         ),
         block(
             id: 0xB3, sessionID: mathSessionID, order: 3, kind: BlockKind.concept,
             payload: BlockPayload.Concept(
                 heading: "Right triangles and the theorem",
-                body: "In any right triangle, the square of the hypotenuse (the side opposite the right angle) equals the sum of the squares of the other two sides. If the legs have lengths a and b and the hypotenuse has length c, then a² + b² = c². The relationship runs both ways: any triangle whose sides satisfy a² + b² = c² is a right triangle.\n\n(Future renderer: a dedicated `equation` block kind will render this with proper math typesetting. For now, plain text with Unicode superscripts.)",
+                body: #"""
+                In any right triangle, the square of the **hypotenuse** (the side opposite the right angle) equals the sum of the squares of the other two sides. If the legs have lengths $a$ and $b$ and the hypotenuse has length $c$, then:
+
+                $$a^2 + b^2 = c^2$$
+
+                The relationship runs both ways: any triangle whose sides satisfy $a^2 + b^2 = c^2$ is a right triangle.
+                """#,
                 callout: "The hypotenuse is always the longest side and sits opposite the right angle."
             )
         ),
@@ -139,16 +145,28 @@ enum Fixtures {
             id: 0xB4, sessionID: mathSessionID, order: 4, kind: BlockKind.example,
             payload: BlockPayload.Example(
                 heading: "Worked example: find the hypotenuse",
-                prose: "Suppose a right triangle has legs of length 3 and 4. We want to find the hypotenuse c.\n\nApplying the theorem:\n  a² + b² = c²\n  3² + 4² = c²\n  9 + 16 = c²\n  25 = c²\n  c = 5\n\nThe famous 3–4–5 right triangle. Notice all three sides are whole numbers — that's a Pythagorean triple."
+                prose: #"""
+                Suppose a right triangle has legs of length $3$ and $4$. We want to find the hypotenuse $c$.
+
+                Applying the theorem:
+
+                $$a^2 + b^2 = c^2$$
+                $$3^2 + 4^2 = c^2$$
+                $$9 + 16 = c^2$$
+                $$25 = c^2$$
+                $$c = 5$$
+
+                The famous **3–4–5 right triangle**. Notice all three sides are whole numbers — that's a *Pythagorean triple*.
+                """#
             )
         ),
         block(
             id: 0xB5, sessionID: mathSessionID, order: 5, kind: BlockKind.multipleChoice,
             payload: BlockPayload.MultipleChoice(
-                question: "A right triangle has legs of length 6 and 8. What is the length of the hypotenuse?",
-                options: ["10", "12", "14", "√48"],
+                question: "A right triangle has legs of length $6$ and $8$. What is the length of the hypotenuse?",
+                options: ["$10$", "$12$", "$14$", #"$\sqrt{48}$"#],
                 correctIndex: 0,
-                explanation: "6² + 8² = 36 + 64 = 100, so c = √100 = 10. This is a 6–8–10 triangle (a scaled-up 3–4–5)."
+                explanation: #"$6^2 + 8^2 = 36 + 64 = 100$, so $c = \sqrt{100} = 10$. This is a 6–8–10 triangle (a scaled-up 3–4–5)."#
             )
         ),
         block(
@@ -179,7 +197,7 @@ enum Fixtures {
             payload: BlockPayload.ReviewCard(
                 conceptID: "22222222-2222-2222-2222-222222222222",
                 front: "State the Pythagorean Theorem.",
-                back: "In a right triangle with legs a and b and hypotenuse c: a² + b² = c²."
+                back: "In a right triangle with legs $a$ and $b$ and hypotenuse $c$: $a^2 + b^2 = c^2$."
             )
         ),
     ]
@@ -201,7 +219,9 @@ enum Fixtures {
             id: 0xC3, sessionID: chemistrySessionID, order: 3, kind: BlockKind.concept,
             payload: BlockPayload.Concept(
                 heading: "Conservation of mass",
-                body: "Atoms are not created or destroyed in a chemical reaction — they're rearranged. So the same number of each atom must appear on both sides of the equation. We balance equations by placing whole-number coefficients in front of each formula until the atom counts match. We never change subscripts inside a formula — that would change which substance we're describing.\n\n(Future renderer: a dedicated `chem_equation` block will use mhchem-style notation with arrows and subscripts. For now, plain text with Unicode subscripts.)",
+                body: #"""
+                Atoms are not created or destroyed in a chemical reaction — they're **rearranged**. So the same number of each atom must appear on both sides of the equation. We balance equations by placing whole-number *coefficients* in front of each formula until the atom counts match. We never change *subscripts* inside a formula — that would change which substance we're describing.
+                """#,
                 callout: "Coefficients balance equations. Subscripts define substances. Don't confuse the two."
             )
         ),
@@ -209,21 +229,39 @@ enum Fixtures {
             id: 0xC4, sessionID: chemistrySessionID, order: 4, kind: BlockKind.example,
             payload: BlockPayload.Example(
                 heading: "Worked example: hydrogen + oxygen → water",
-                prose: "Start with the unbalanced equation:\n  H₂ + O₂ → H₂O\n\nCount atoms:\n  Left:  H = 2, O = 2\n  Right: H = 2, O = 1     (oxygen is off)\n\nPlace a 2 in front of H₂O to balance oxygen:\n  H₂ + O₂ → 2 H₂O\n  Left:  H = 2, O = 2\n  Right: H = 4, O = 2     (now hydrogen is off)\n\nPlace a 2 in front of H₂ to balance hydrogen:\n  2 H₂ + O₂ → 2 H₂O\n  Left:  H = 4, O = 2\n  Right: H = 4, O = 2     ✓ balanced"
+                prose: #"""
+                Start with the unbalanced equation:
+
+                $$H_2 + O_2 \rightarrow H_2O$$
+
+                Count atoms — left: $H = 2$, $O = 2$; right: $H = 2$, $O = 1$. Oxygen is off.
+
+                Place a $2$ in front of $H_2O$ to balance oxygen:
+
+                $$H_2 + O_2 \rightarrow 2\, H_2O$$
+
+                Now left: $H = 2$, $O = 2$; right: $H = 4$, $O = 2$. Hydrogen is off.
+
+                Place a $2$ in front of $H_2$ to balance hydrogen:
+
+                $$2\, H_2 + O_2 \rightarrow 2\, H_2O$$
+
+                Both sides now have $H = 4$ and $O = 2$ — **balanced**.
+                """#
             )
         ),
         block(
             id: 0xC5, sessionID: chemistrySessionID, order: 5, kind: BlockKind.multipleChoice,
             payload: BlockPayload.MultipleChoice(
-                question: "Which is the correctly balanced form of methane combustion: CH₄ + O₂ → CO₂ + H₂O?",
+                question: #"Which is the correctly balanced form of methane combustion $CH_4 + O_2 \rightarrow CO_2 + H_2O$?"#,
                 options: [
-                    "CH₄ + O₂ → CO₂ + H₂O",
-                    "CH₄ + 2 O₂ → CO₂ + 2 H₂O",
-                    "2 CH₄ + O₂ → 2 CO₂ + H₂O",
-                    "CH₄ + 3 O₂ → CO₂ + 2 H₂O"
+                    #"$CH_4 + O_2 \rightarrow CO_2 + H_2O$"#,
+                    #"$CH_4 + 2\, O_2 \rightarrow CO_2 + 2\, H_2O$"#,
+                    #"$2\, CH_4 + O_2 \rightarrow 2\, CO_2 + H_2O$"#,
+                    #"$CH_4 + 3\, O_2 \rightarrow CO_2 + 2\, H_2O$"#,
                 ],
                 correctIndex: 1,
-                explanation: "Carbon balances 1↔1. Hydrogen needs 2 H₂O on the right (4 H). That makes oxygen 4 (from H₂O) + 2 (from CO₂) = 4 on each side, so 2 O₂ on the left."
+                explanation: #"Carbon balances $1 \leftrightarrow 1$. Hydrogen needs $2\, H_2O$ on the right ($4$ H). That makes oxygen $4$ (from $H_2O$) $+\, 2$ (from $CO_2$) $= 4$ on each side, so $2\, O_2$ on the left."#
             )
         ),
         block(

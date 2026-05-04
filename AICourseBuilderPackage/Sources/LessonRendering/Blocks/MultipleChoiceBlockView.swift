@@ -1,6 +1,7 @@
 import LearningModels
 import LearningUI
 import SwiftUI
+import Textual
 
 struct MultipleChoiceBlockView: View {
     let payload: BlockPayload.MultipleChoice
@@ -9,7 +10,7 @@ struct MultipleChoiceBlockView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(payload.question)
+            InlineText(markdown: payload.question, syntaxExtensions: [.math])
                 .font(.headline)
                 .foregroundStyle(theme.text.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -30,7 +31,7 @@ struct MultipleChoiceBlockView: View {
                         .foregroundStyle(theme.text.primary)
                 }
                 if let explanation = payload.explanation {
-                    Text(explanation)
+                    InlineText(markdown: explanation, syntaxExtensions: [.math])
                         .font(.callout)
                         .foregroundStyle(theme.text.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -53,7 +54,7 @@ struct MultipleChoiceBlockView: View {
             HStack(spacing: 12) {
                 Image(systemName: isSelected ? "circle.fill" : "circle")
                     .foregroundStyle(isSelected ? theme.accent.primary : theme.text.tertiary)
-                Text(option)
+                InlineText(markdown: option, syntaxExtensions: [.math])
                     .font(.body)
                     .foregroundStyle(theme.text.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
