@@ -1,0 +1,552 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0E50151561DC7D51FA61DB44 /* LearningDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = B65498D4C5FF131852CD11F3 /* LearningDatabase */; };
+		17C1A01FF39BCA652DB4D213 /* AppFeature in Frameworks */ = {isa = PBXBuildFile; productRef = D81601636D2D1E2453D9A91E /* AppFeature */; };
+		2BF3E1AD35DEC68CAE39AB57 /* LearningRepository in Frameworks */ = {isa = PBXBuildFile; productRef = 2F727642AECC15BCC5DFAB7B /* LearningRepository */; };
+		3A317F1EC5764586BA9A4F6C /* LearningRepository in Frameworks */ = {isa = PBXBuildFile; productRef = C0BB924582143CD4B469E49A /* LearningRepository */; };
+		45C6A45B6E7DBAAEE36989B6 /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = B1A062BA8B1961F7BFA537A5 /* Dependencies */; };
+		8C4C5BAB28BEAFB761300863 /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = CD17A4B3421243F559AC5781 /* Dependencies */; };
+		B4BD4854344CD6EB2A5904E9 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = E537273B5A3DFD831AF3FB1D /* ComposableArchitecture */; };
+		C78000DC81CAABF5FB6B3407 /* AppFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 76329AEAEF4D00D4C9E0365F /* AppFeature */; };
+		C7D977AF02227B4C4D700B71 /* AICourseBuilderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72741242C4E258EAB831F87 /* AICourseBuilderApp.swift */; };
+		CF103315A905EE659A922910 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B743EC0CDB50DB2FF57D4FA0 /* Assets.xcassets */; };
+		D436DD5137A9F5D84EA8496C /* AICourseBuilderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72741242C4E258EAB831F87 /* AICourseBuilderApp.swift */; };
+		EC429F087442F02BAB87CBE3 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 5581785587C7815DBD8F1AA0 /* ComposableArchitecture */; };
+		F76F39A8332021E4F9FD970C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B743EC0CDB50DB2FF57D4FA0 /* Assets.xcassets */; };
+		FF4E77599D5026E6746686CF /* LearningDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = BD8D02A94B0F1708E0DE3BA5 /* LearningDatabase */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		3D8357FB3BC6C6CE1345CC29 /* AICourseBuilderPackage */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AICourseBuilderPackage; path = AICourseBuilderPackage; sourceTree = SOURCE_ROOT; };
+		5722B2C231F6380BF922DDD1 /* AICourseBuilder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AICourseBuilder.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1CDAE4D4BE61F73409DC46E /* AICourseBuilder-iPad.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "AICourseBuilder-iPad.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B72741242C4E258EAB831F87 /* AICourseBuilderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AICourseBuilderApp.swift; sourceTree = "<group>"; };
+		B743EC0CDB50DB2FF57D4FA0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		443084E597329D98E8F1F814 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				17C1A01FF39BCA652DB4D213 /* AppFeature in Frameworks */,
+				FF4E77599D5026E6746686CF /* LearningDatabase in Frameworks */,
+				3A317F1EC5764586BA9A4F6C /* LearningRepository in Frameworks */,
+				45C6A45B6E7DBAAEE36989B6 /* Dependencies in Frameworks */,
+				B4BD4854344CD6EB2A5904E9 /* ComposableArchitecture in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		50B4A2347A5154629461E3F6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C78000DC81CAABF5FB6B3407 /* AppFeature in Frameworks */,
+				0E50151561DC7D51FA61DB44 /* LearningDatabase in Frameworks */,
+				2BF3E1AD35DEC68CAE39AB57 /* LearningRepository in Frameworks */,
+				8C4C5BAB28BEAFB761300863 /* Dependencies in Frameworks */,
+				EC429F087442F02BAB87CBE3 /* ComposableArchitecture in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		57D2DB45647A0BA2547D1253 /* AICourseBuilder */ = {
+			isa = PBXGroup;
+			children = (
+				B72741242C4E258EAB831F87 /* AICourseBuilderApp.swift */,
+				B743EC0CDB50DB2FF57D4FA0 /* Assets.xcassets */,
+			);
+			path = AICourseBuilder;
+			sourceTree = "<group>";
+		};
+		598562666A4AA5FB00678CF3 = {
+			isa = PBXGroup;
+			children = (
+				57D2DB45647A0BA2547D1253 /* AICourseBuilder */,
+				E9AB1773FB9F9E483ECC596F /* Packages */,
+				B94169099F7565E5D865D66E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		B94169099F7565E5D865D66E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B1CDAE4D4BE61F73409DC46E /* AICourseBuilder-iPad.app */,
+				5722B2C231F6380BF922DDD1 /* AICourseBuilder.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E9AB1773FB9F9E483ECC596F /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				3D8357FB3BC6C6CE1345CC29 /* AICourseBuilderPackage */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		C3335D2A851BB7AF3A55C717 /* AICourseBuilder-iPad */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0B77DEBC0AB5A4F8AB2F7EDE /* Build configuration list for PBXNativeTarget "AICourseBuilder-iPad" */;
+			buildPhases = (
+				E2F1E6F3BCB2B33359089CFD /* Sources */,
+				26C637E7331B8CD8B5BEFED4 /* Resources */,
+				443084E597329D98E8F1F814 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "AICourseBuilder-iPad";
+			packageProductDependencies = (
+				D81601636D2D1E2453D9A91E /* AppFeature */,
+				BD8D02A94B0F1708E0DE3BA5 /* LearningDatabase */,
+				C0BB924582143CD4B469E49A /* LearningRepository */,
+				B1A062BA8B1961F7BFA537A5 /* Dependencies */,
+				E537273B5A3DFD831AF3FB1D /* ComposableArchitecture */,
+			);
+			productName = "AICourseBuilder-iPad";
+			productReference = B1CDAE4D4BE61F73409DC46E /* AICourseBuilder-iPad.app */;
+			productType = "com.apple.product-type.application";
+		};
+		F0AD74AC54ED4D213A68328F /* AICourseBuilder */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 29A79BD4381701091D2A23FF /* Build configuration list for PBXNativeTarget "AICourseBuilder" */;
+			buildPhases = (
+				2FB178BC8E8F269375BA6664 /* Sources */,
+				F052C7FF7C625CD614F6D042 /* Resources */,
+				50B4A2347A5154629461E3F6 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AICourseBuilder;
+			packageProductDependencies = (
+				76329AEAEF4D00D4C9E0365F /* AppFeature */,
+				B65498D4C5FF131852CD11F3 /* LearningDatabase */,
+				2F727642AECC15BCC5DFAB7B /* LearningRepository */,
+				CD17A4B3421243F559AC5781 /* Dependencies */,
+				5581785587C7815DBD8F1AA0 /* ComposableArchitecture */,
+			);
+			productName = AICourseBuilder;
+			productReference = 5722B2C231F6380BF922DDD1 /* AICourseBuilder.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		074D9F1B6473F0F53A7E4F2E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					C3335D2A851BB7AF3A55C717 = {
+						DevelopmentTeam = J24ZKG6Q2X;
+						ProvisioningStyle = Automatic;
+					};
+					F0AD74AC54ED4D213A68328F = {
+						DevelopmentTeam = J24ZKG6Q2X;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 6B1B3ACD10E04A3A37D6B84A /* Build configuration list for PBXProject "AICourseBuilder" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 598562666A4AA5FB00678CF3;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				2AEB0711BB3186D07AB23C27 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
+				B16E518BFF00116023264081 /* XCRemoteSwiftPackageReference "swift-dependencies" */,
+				3BABA104ED15A79F93C2BC84 /* XCLocalSwiftPackageReference "AICourseBuilderPackage" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = B94169099F7565E5D865D66E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F0AD74AC54ED4D213A68328F /* AICourseBuilder */,
+				C3335D2A851BB7AF3A55C717 /* AICourseBuilder-iPad */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		26C637E7331B8CD8B5BEFED4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CF103315A905EE659A922910 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F052C7FF7C625CD614F6D042 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F76F39A8332021E4F9FD970C /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2FB178BC8E8F269375BA6664 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C7D977AF02227B4C4D700B71 /* AICourseBuilderApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E2F1E6F3BCB2B33359089CFD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D436DD5137A9F5D84EA8496C /* AICourseBuilderApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		5745DF5074FE4BC34241B5CC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "AICourseBuilder/AICourseBuilder-Release.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = J24ZKG6Q2X;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AICourseBuilder/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stareraadaspace.ai-course-builder";
+				PRODUCT_NAME = AICourseBuilder;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		76EEBAB428E8417DD527A31A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "AICourseBuilder/AICourseBuilder-iPad-Release.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = J24ZKG6Q2X;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "AICourseBuilder/Info-iPad.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stareraadaspace.ai-course-builder";
+				PRODUCT_NAME = AICourseBuilder;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = 2;
+			};
+			name = Release;
+		};
+		782C8989309B30954C686134 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.2;
+			};
+			name = Debug;
+		};
+		8196ABACEDF239BE1D3EE77F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "AICourseBuilder/AICourseBuilder-iPad.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = J24ZKG6Q2X;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "AICourseBuilder/Info-iPad.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stareraadaspace.ai-course-builder";
+				PRODUCT_NAME = AICourseBuilder;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = 2;
+			};
+			name = Debug;
+		};
+		8660FB6ED28A1ADEB9DD8104 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = AICourseBuilder/AICourseBuilder.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = J24ZKG6Q2X;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AICourseBuilder/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.stareraadaspace.ai-course-builder";
+				PRODUCT_NAME = AICourseBuilder;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		A674071CCB7335FF03583571 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.2;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0B77DEBC0AB5A4F8AB2F7EDE /* Build configuration list for PBXNativeTarget "AICourseBuilder-iPad" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8196ABACEDF239BE1D3EE77F /* Debug */,
+				76EEBAB428E8417DD527A31A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		29A79BD4381701091D2A23FF /* Build configuration list for PBXNativeTarget "AICourseBuilder" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8660FB6ED28A1ADEB9DD8104 /* Debug */,
+				5745DF5074FE4BC34241B5CC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6B1B3ACD10E04A3A37D6B84A /* Build configuration list for PBXProject "AICourseBuilder" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				782C8989309B30954C686134 /* Debug */,
+				A674071CCB7335FF03583571 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		3BABA104ED15A79F93C2BC84 /* XCLocalSwiftPackageReference "AICourseBuilderPackage" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = AICourseBuilderPackage;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2AEB0711BB3186D07AB23C27 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+		B16E518BFF00116023264081 /* XCRemoteSwiftPackageReference "swift-dependencies" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-dependencies";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2F727642AECC15BCC5DFAB7B /* LearningRepository */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LearningRepository;
+		};
+		5581785587C7815DBD8F1AA0 /* ComposableArchitecture */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2AEB0711BB3186D07AB23C27 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
+			productName = ComposableArchitecture;
+		};
+		76329AEAEF4D00D4C9E0365F /* AppFeature */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AppFeature;
+		};
+		B1A062BA8B1961F7BFA537A5 /* Dependencies */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B16E518BFF00116023264081 /* XCRemoteSwiftPackageReference "swift-dependencies" */;
+			productName = Dependencies;
+		};
+		B65498D4C5FF131852CD11F3 /* LearningDatabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LearningDatabase;
+		};
+		BD8D02A94B0F1708E0DE3BA5 /* LearningDatabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LearningDatabase;
+		};
+		C0BB924582143CD4B469E49A /* LearningRepository */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LearningRepository;
+		};
+		CD17A4B3421243F559AC5781 /* Dependencies */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B16E518BFF00116023264081 /* XCRemoteSwiftPackageReference "swift-dependencies" */;
+			productName = Dependencies;
+		};
+		D81601636D2D1E2453D9A91E /* AppFeature */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AppFeature;
+		};
+		E537273B5A3DFD831AF3FB1D /* ComposableArchitecture */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2AEB0711BB3186D07AB23C27 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
+			productName = ComposableArchitecture;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 074D9F1B6473F0F53A7E4F2E /* Project object */;
+}

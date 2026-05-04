@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Course Builder MVP Design Board</title>
+  <style>
+    :root {
+      color-scheme: light;
+
+      --app-canvas: #F7F3EE;
+      --page: #FFFCF8;
+      --sidebar: #102A4A;
+      --sidebar-active: #1A3A63;
+      --card: #FFFEFC;
+      --card-muted: #F5F8FC;
+      --input: #FBFCFE;
+      --code-block: #112746;
+      --note-block: #EEF4FB;
+      --accent-tint: #EDF3FF;
+      --success-tint: #EAF7F2;
+      --warm-tint: #FFF4E6;
+
+      --text-primary: #1A2E47;
+      --text-secondary: #607086;
+      --text-tertiary: #8D99AA;
+      --text-inverse: #FFFFFF;
+      --text-sidebar: #F8FBFF;
+      --text-sidebar-secondary: #AFC0D9;
+      --link: #2B61D4;
+
+      --accent: #295FD3;
+      --accent-pressed: #1C4CAF;
+      --accent-soft: #EAF2FF;
+      --teal: #4BA591;
+      --teal-soft: #E7F6F1;
+      --warm: #F0B15B;
+      --warm-soft: #FFF3E1;
+
+      --success: #45B57E;
+      --success-soft: #E9F7F0;
+      --warning: #E4A04D;
+      --warning-soft: #FFF4E4;
+      --danger: #D96C64;
+      --danger-soft: #FCEBE8;
+      --locked: #A6B2C2;
+      --progress-track: #DCE6F3;
+      --progress-current: #7B98D9;
+      --progress-complete: #45B57E;
+
+      --border-subtle: #EEF2F7;
+      --border: #DCE4EF;
+      --border-strong: #C5D2E2;
+      --border-accent: #AFC6F5;
+
+      --hover: rgba(16, 42, 74, 0.04);
+      --pressed: rgba(16, 42, 74, 0.08);
+      --selected: rgba(41, 95, 211, 0.10);
+      --scrim: rgba(16, 42, 74, 0.12);
+      --sidebar-scrim: rgba(255, 255, 255, 0.08);
+
+      --glow-warm: rgba(244, 220, 200, 0.48);
+      --glow-blue: rgba(220, 231, 251, 0.52);
+      --glow-lavender: rgba(236, 228, 250, 0.42);
+      --shadow-card: 0 24px 60px rgba(16, 42, 74, 0.08);
+      --shadow-float: 0 24px 80px rgba(16, 42, 74, 0.14);
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+
+      --app-canvas: #0C131D;
+      --page: #111B27;
+      --sidebar: #0A1830;
+      --sidebar-active: #153154;
+      --card: #172334;
+      --card-muted: #132031;
+      --input: #0E1C2E;
+      --code-block: #081424;
+      --note-block: #102238;
+      --accent-tint: #12294A;
+      --success-tint: #112721;
+      --warm-tint: #2A1E10;
+
+      --text-primary: #EDF4FF;
+      --text-secondary: #A7B5C9;
+      --text-tertiary: #7E90A8;
+      --text-inverse: #FFFFFF;
+      --text-sidebar: #F2F7FF;
+      --text-sidebar-secondary: #91A8C8;
+      --link: #7FA6FF;
+
+      --accent: #74A0FF;
+      --accent-pressed: #5E8AEE;
+      --accent-soft: #153154;
+      --teal: #63CBB2;
+      --teal-soft: #122C25;
+      --warm: #F5C47E;
+      --warm-soft: #312311;
+
+      --success: #69D7A3;
+      --success-soft: #10261F;
+      --warning: #F0BF78;
+      --warning-soft: #2F2414;
+      --danger: #EF8F88;
+      --danger-soft: #331A18;
+      --locked: #6D809A;
+      --progress-track: #24384F;
+      --progress-current: #9BB8FF;
+      --progress-complete: #69D7A3;
+
+      --border-subtle: #1A293C;
+      --border: #24364B;
+      --border-strong: #31465F;
+      --border-accent: #4B6FB7;
+
+      --hover: rgba(255, 255, 255, 0.04);
+      --pressed: rgba(255, 255, 255, 0.08);
+      --selected: rgba(116, 160, 255, 0.10);
+      --scrim: rgba(0, 0, 0, 0.12);
+      --sidebar-scrim: rgba(255, 255, 255, 0.08);
+
+      --glow-warm: rgba(90, 59, 40, 0.48);
+      --glow-blue: rgba(36, 66, 110, 0.52);
+      --glow-lavender: rgba(51, 43, 88, 0.42);
+      --shadow-card: 0 24px 60px rgba(0, 0, 0, 0.26);
+      --shadow-float: 0 24px 80px rgba(0, 0, 0, 0.34);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 20% 12%, var(--glow-warm), transparent 22%),
+        radial-gradient(circle at 72% 18%, var(--glow-blue), transparent 26%),
+        linear-gradient(180deg, var(--app-canvas), color-mix(in srgb, var(--app-canvas) 75%, black 4%));
+      color: var(--text-primary);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      padding: 28px;
+    }
+
+    .page {
+      max-width: 1760px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+      margin-bottom: 26px;
+    }
+
+    .hero-copy h1 {
+      margin: 0 0 12px;
+      font-size: clamp(34px, 4vw, 58px);
+      line-height: 0.96;
+      letter-spacing: -0.04em;
+      font-weight: 760;
+      max-width: 620px;
+    }
+
+    .hero-copy p {
+      margin: 0;
+      max-width: 720px;
+      font-size: 16px;
+      line-height: 1.65;
+      color: var(--text-secondary);
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chip,
+    .button,
+    .nav-pill,
+    .tiny-pill {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--card) 84%, transparent);
+      color: var(--text-primary);
+      font: inherit;
+    }
+
+    .chip {
+      padding: 11px 14px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(14px);
+    }
+
+    .button {
+      padding: 12px 18px;
+      font-size: 14px;
+      font-weight: 650;
+      cursor: pointer;
+      transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+    }
+
+    .button.primary {
+      border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+      background: linear-gradient(180deg, var(--accent), var(--accent-pressed));
+      color: var(--text-inverse);
+      box-shadow: 0 16px 30px color-mix(in srgb, var(--accent) 22%, transparent);
+    }
+
+    .button.secondary {
+      background: color-mix(in srgb, var(--card) 88%, transparent);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(560px, 1fr));
+      gap: 28px;
+    }
+
+    .artboard {
+      background: color-mix(in srgb, var(--page) 92%, transparent);
+      border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+      border-radius: 28px;
+      padding: 18px;
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(18px);
+    }
+
+    .artboard-shell {
+      background: var(--page);
+      border: 1px solid var(--border-subtle);
+      border-radius: 22px;
+      min-height: 720px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .artboard-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-top: 14px;
+      padding: 0 6px 2px;
+    }
+
+    .artboard-label strong {
+      font-size: 15px;
+    }
+
+    .artboard-label span {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 720;
+      letter-spacing: -0.025em;
+      color: var(--text-primary);
+    }
+
+    .brand-mark {
+      width: 26px;
+      height: 26px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 22%, white 78%), var(--accent-soft));
+      color: var(--accent);
+      font-size: 15px;
+      font-weight: 800;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+    }
+
+    .screen {
+      height: 100%;
+    }
+
+    .screen-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 24px 0;
+    }
+
+    .muted {
+      color: var(--text-secondary);
+    }
+
+    .tiny {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    .input-block,
+    .option-card,
+    .metric-card,
+    .card,
+    .small-card,
+    .lesson-card,
+    .tutor-card,
+    .stage-card,
+    .goal-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+    }
+
+    .goal-layout {
+      display: grid;
+      grid-template-columns: minmax(360px, 1.1fr) minmax(280px, 0.9fr);
+      gap: 32px;
+      padding: 18px 24px 28px;
+      align-items: center;
+    }
+
+    .goal-copy h2 {
+      margin: 8px 0 10px;
+      font-size: 56px;
+      line-height: 0.94;
+      letter-spacing: -0.055em;
+      font-weight: 760;
+      max-width: 420px;
+    }
+
+    .goal-copy p {
+      margin: 0 0 26px;
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.7;
+      max-width: 430px;
+    }
+
+    .input-block {
+      padding: 18px 18px 20px;
+      margin-bottom: 18px;
+      background: linear-gradient(180deg, var(--input), color-mix(in srgb, var(--input) 84%, var(--card) 16%));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
+    }
+
+    .input-label,
+    .section-label {
+      margin-bottom: 8px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      color: var(--text-tertiary);
+      font-weight: 700;
+    }
+
+    .goal-input {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 56px;
+      padding: 16px 18px;
+      border-radius: 15px;
+      border: 1.5px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+      background: color-mix(in srgb, var(--card) 86%, transparent);
+      color: var(--text-primary);
+      font-size: 15px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.42);
+    }
+
+    .goal-icon,
+    .session-icon,
+    .badge-circle {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      flex: none;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .options-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .time-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .option-card {
+      padding: 14px 14px 16px;
+      min-height: 88px;
+    }
+
+    .option-card.active {
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 88%, var(--card) 12%), var(--card));
+      border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent);
+    }
+
+    .option-card strong,
+    .metric-card strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .option-card span,
+    .metric-card span {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .metric-card {
+      padding: 14px 14px 16px;
+      background: var(--card-muted);
+    }
+
+    .check-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 14px;
+      margin-bottom: 22px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .check-item::before {
+      content: "✓";
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .action-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hero-illustration {
+      min-height: 530px;
+      position: relative;
+      display: grid;
+      place-items: center;
+    }
+
+    .hero-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(0.2px);
+    }
+
+    .hero-orb.one {
+      width: 360px;
+      height: 360px;
+      background: radial-gradient(circle at 28% 28%, var(--glow-warm), transparent 64%);
+      left: 22px;
+      top: 58px;
+    }
+
+    .hero-orb.two {
+      width: 380px;
+      height: 380px;
+      background: radial-gradient(circle at 56% 38%, var(--glow-blue), transparent 60%);
+      right: 20px;
+      bottom: 46px;
+    }
+
+    .hero-stack {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .hero-panel {
+      position: absolute;
+      border-radius: 24px;
+      border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+      background: color-mix(in srgb, var(--card) 90%, transparent);
+      box-shadow: var(--shadow-float);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero-panel.main {
+      left: 74px;
+      right: 48px;
+      bottom: 124px;
+      height: 180px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--sidebar) 84%, white 8%), color-mix(in srgb, var(--sidebar) 96%, black 6%));
+      color: var(--text-inverse);
+      display: flex;
+      align-items: center;
+      padding: 28px 30px;
+      gap: 24px;
+    }
+
+    .hero-panel.main .lambda {
+      font-size: 72px;
+      font-weight: 760;
+      line-height: 1;
+      color: var(--text-inverse);
+    }
+
+    .hero-lines {
+      flex: 1;
+      display: grid;
+      gap: 14px;
+    }
+
+    .hero-line {
+      height: 11px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .hero-line.short { width: 42%; }
+    .hero-line.mid { width: 74%; }
+    .hero-line.long { width: 88%; }
+
+    .hero-panel.note {
+      width: 260px;
+      right: 60px;
+      top: 116px;
+      padding: 20px;
+    }
+
+    .hero-panel.mini {
+      width: 180px;
+      height: 104px;
+      left: 94px;
+      top: 58px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--warm-soft) 92%, white 8%), color-mix(in srgb, var(--warm-soft) 68%, transparent));
+    }
+
+    .note-lines {
+      display: grid;
+      gap: 12px;
+    }
+
+    .note-line {
+      height: 9px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--border) 85%, transparent);
+    }
+
+    .note-line:nth-child(1) { width: 64%; }
+    .note-line:nth-child(2) { width: 82%; }
+    .note-line:nth-child(3) { width: 54%; }
+    .note-line:nth-child(4) { width: 76%; }
+
+    .sidebar-shell {
+      display: grid;
+      grid-template-columns: 132px 1fr;
+      height: 100%;
+    }
+
+    .sidebar-nav {
+      background: linear-gradient(180deg, var(--sidebar), color-mix(in srgb, var(--sidebar) 80%, black 20%));
+      padding: 20px 16px;
+      color: var(--text-sidebar);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .sidebar-nav .brand {
+      color: var(--text-sidebar);
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .sidebar-nav .brand-mark {
+      background: rgba(255,255,255,0.08);
+      color: var(--text-sidebar);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+    }
+
+    .nav-group {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,0.04);
+      background: transparent;
+      color: var(--text-sidebar-secondary);
+      font-size: 13px;
+      cursor: default;
+    }
+
+    .nav-pill.active {
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+      color: var(--text-sidebar);
+      border-color: rgba(255,255,255,0.08);
+      box-shadow: inset 0 0 0 1px var(--sidebar-scrim);
+    }
+
+    .nav-icon-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.08);
+      color: inherit;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .user-card {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 10px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-sidebar);
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #DDE6F4, #B5C7E1);
+    }
+
+    .dashboard-main,
+    .program-main {
+      padding: 20px 22px 22px;
+      background: var(--page);
+    }
+
+    .headline-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .headline-row h3 {
+      margin: 0;
+      font-size: 36px;
+      line-height: 1;
+      letter-spacing: -0.045em;
+    }
+
+    .top-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .metric-pill {
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      display: grid;
+      gap: 6px;
+      min-height: 94px;
+    }
+
+    .metric-pill strong {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 650;
+    }
+
+    .metric-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 22px;
+      font-weight: 760;
+      letter-spacing: -0.03em;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .card {
+      padding: 18px;
+    }
+
+    .card-title {
+      margin: 0 0 8px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 700;
+    }
+
+    .session-card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+
+    .session-card-title h4 {
+      margin: 0;
+      font-size: 27px;
+      line-height: 1.04;
+      letter-spacing: -0.04em;
+    }
+
+    .session-card p,
+    .small-card p,
+    .card p {
+      margin: 0;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      font-size: 13px;
+    }
+
+    .session-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .progress-row {
+      display: grid;
+      grid-template-columns: repeat(10, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .progress-dot {
+      height: 10px;
+      border-radius: 999px;
+      background: var(--progress-track);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-dot.complete { background: color-mix(in srgb, var(--progress-complete) 18%, var(--progress-track)); }
+    .progress-dot.complete::before,
+    .progress-dot.current::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+    }
+
+    .progress-dot.complete::before { background: var(--progress-complete); }
+    .progress-dot.current::before { background: var(--progress-current); }
+
+    .bottom-cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .small-card {
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      display: grid;
+      gap: 10px;
+      min-height: 144px;
+    }
+
+    .small-card strong {
+      font-size: 15px;
+    }
+
+    .status-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: var(--card-muted);
+      color: var(--text-secondary);
+      font-size: 12px;
+      width: fit-content;
+    }
+
+    .status-tag::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--locked);
+    }
+
+    .status-tag.success::before { background: var(--success); }
+    .status-tag.warning::before { background: var(--warning); }
+    .status-tag.info::before { background: var(--accent); }
+
+    .milestone-track {
+      height: 8px;
+      border-radius: 999px;
+      background: var(--progress-track);
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .milestone-track span {
+      display: block;
+      width: 72%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--progress-current));
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 170px minmax(0, 1fr) 230px;
+      height: 100%;
+      background: var(--page);
+    }
+
+    .workspace-column {
+      border-right: 1px solid var(--border-subtle);
+    }
+
+    .workspace-column:last-child {
+      border-right: none;
+    }
+
+    .steps {
+      padding: 20px 16px;
+      background: color-mix(in srgb, var(--page) 92%, var(--card-muted) 8%);
+    }
+
+    .steps ol {
+      list-style: none;
+      margin: 14px 0 0;
+      padding: 0;
+      display: grid;
+      gap: 16px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .step-index {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--border);
+      background: var(--card);
+      font-size: 12px;
+      font-weight: 760;
+      color: var(--text-secondary);
+    }
+
+    .step.active .step-index {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--text-inverse);
+    }
+
+    .step.complete .step-index {
+      background: var(--success-soft);
+      border-color: color-mix(in srgb, var(--success) 30%, transparent);
+      color: var(--success);
+    }
+
+    .step strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .step span {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .workspace-main {
+      padding: 20px;
+      display: grid;
+      grid-template-rows: auto auto auto 1fr;
+      gap: 14px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--page) 94%, white 6%), var(--page));
+    }
+
+    .workspace-main h3 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      line-height: 1;
+      letter-spacing: -0.045em;
+    }
+
+    .workspace-main p {
+      margin: 0;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      font-size: 13px;
+    }
+
+    .lesson-card,
+    .tutor-card {
+      padding: 16px;
+    }
+
+    .code-sample {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--code-block), color-mix(in srgb, var(--code-block) 84%, black 16%));
+      color: rgba(255,255,255,0.92);
+      font: 14px/1.55 ui-monospace, "SF Mono", Menlo, monospace;
+      letter-spacing: -0.01em;
+      overflow: hidden;
+    }
+
+    .explain-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .explain-cell {
+      padding: 12px;
+      border-radius: 14px;
+      background: var(--card-muted);
+      border: 1px solid var(--border-subtle);
+      text-align: center;
+    }
+
+    .explain-cell strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .explain-cell span {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .practice-box {
+      padding: 16px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 62%, var(--card) 38%), var(--card));
+      border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+    }
+
+    .practice-box code {
+      display: block;
+      margin: 12px 0 8px;
+      font: 15px/1.6 ui-monospace, "SF Mono", Menlo, monospace;
+      color: var(--text-primary);
+    }
+
+    .workspace-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .tutor {
+      padding: 20px 16px;
+      background: color-mix(in srgb, var(--page) 90%, var(--card-muted) 10%);
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .tutor-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .tutor-card h4,
+    .stage-card h4,
+    .goal-card h4 {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .hint-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 11px;
+      border-radius: 12px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      width: fit-content;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .notes-box {
+      padding: 12px;
+      border-radius: 14px;
+      background: var(--note-block);
+      border: 1px solid color-mix(in srgb, var(--accent) 10%, transparent);
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .program-main {
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 14px;
+    }
+
+    .program-path {
+      position: absolute;
+      left: 28px;
+      top: 152px;
+      bottom: 124px;
+      width: 2px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--success) 46%, transparent), color-mix(in srgb, var(--locked) 60%, transparent));
+    }
+
+    .program-list {
+      position: relative;
+      display: grid;
+      gap: 12px;
+      padding-left: 28px;
+    }
+
+    .stage-card,
+    .goal-card {
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--card);
+      position: relative;
+    }
+
+    .stage-card.current {
+      border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent);
+    }
+
+    .stage-card::before {
+      content: "";
+      position: absolute;
+      left: -24px;
+      top: 22px;
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: var(--locked);
+      border: 3px solid var(--page);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--locked) 25%, transparent);
+    }
+
+    .stage-card.current::before {
+      background: var(--success);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--success) 24%, transparent);
+    }
+
+    .stage-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .stage-head h4 {
+      font-size: 22px;
+      line-height: 1.05;
+      letter-spacing: -0.035em;
+    }
+
+    .progress-summary {
+      text-align: right;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .progress-summary strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--success);
+      font-size: 12px;
+    }
+
+    .session-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .session-row {
+      display: grid;
+      grid-template-columns: 26px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 36px;
+      font-size: 13px;
+    }
+
+    .session-row .num {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: var(--card-muted);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .session-row.complete .num {
+      background: var(--success-soft);
+      color: var(--success);
+      border-color: color-mix(in srgb, var(--success) 25%, transparent);
+    }
+
+    .session-row.current .num {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+    }
+
+    .lock-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 16px 18px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--card) 86%, var(--card-muted) 14%);
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .goal-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 34%, var(--card) 66%), var(--card));
+    }
+
+    .goal-card .badge-circle {
+      background: var(--accent-soft);
+    }
+
+    @media (max-width: 1440px) {
+      .board {
+        grid-template-columns: 1fr;
+      }
+
+      .artboard-shell {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 920px) {
+      body {
+        padding: 18px;
+      }
+
+      .hero {
+        flex-direction: column;
+      }
+
+      .goal-layout,
+      .sidebar-shell,
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar-nav {
+        min-height: 160px;
+      }
+
+      .top-metrics,
+      .dashboard-grid,
+      .bottom-cards,
+      .options-row,
+      .time-row,
+      .check-grid,
+      .explain-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="brand">
+          <span class="brand-mark">A</span>
+          <span>AI Course Builder</span>
+        </div>
+        <h1>MVP Design Board in HTML</h1>
+        <p>
+          A native-learning workspace concept for turning large goals into daily sessions.
+          This board translates the earlier Figma-style concept into a standalone HTML artifact
+          with a light and dark palette aligned to <code>CourseBuilderThemePalette.swift</code>.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <div class="chip">4 screens · Goal Intake · Home Dashboard · Session Workspace · Program Map</div>
+        <button class="button secondary" id="theme-toggle" type="button">Switch to Dark</button>
+      </div>
+    </section>
+
+    <section class="board">
+      <article class="artboard">
+        <div class="artboard-shell">
+          <div class="screen goal-screen">
+            <div class="screen-header">
+              <div class="brand">
+                <span class="brand-mark">A</span>
+                <span>AI Course Builder</span>
+              </div>
+              <div class="chip">Step 1 of 4</div>
+            </div>
+
+            <div class="goal-layout">
+              <div class="goal-copy">
+                <h2>Let’s build your personalized course</h2>
+                <p>
+                  Tell us your goal and we’ll turn it into a structured learning path with
+                  focused sessions, practice, checkpoints, and review.
+                </p>
+
+                <div class="input-block">
+                  <div class="input-label">Learning Goal</div>
+                  <div class="goal-input">
+                    <div class="goal-icon">λ</div>
+                    <span>I want to learn Haskell programming language</span>
+                  </div>
+                </div>
+
+                <div class="section-label">Starting Level</div>
+                <div class="options-row">
+                  <div class="option-card active">
+                    <strong>Beginner</strong>
+                    <span>New to the topic</span>
+                  </div>
+                  <div class="option-card">
+                    <strong>Intermediate</strong>
+                    <span>Some experience</span>
+                  </div>
+                  <div class="option-card">
+                    <strong>Advanced</strong>
+                    <span>Very comfortable</span>
+                  </div>
+                </div>
+
+                <div class="section-label">Time Budget</div>
+                <div class="time-row">
+                  <div class="metric-card">
+                    <strong>30 min/day</strong>
+                    <span>Fast and consistent</span>
+                  </div>
+                  <div class="metric-card option-card active">
+                    <strong>1 hr/day</strong>
+                    <span>Balanced pace</span>
+                  </div>
+                  <div class="metric-card">
+                    <strong>2+ hrs/day</strong>
+                    <span>Deep immersion</span>
+                  </div>
+                </div>
+
+                <div class="section-label">We’ll Generate</div>
+                <div class="check-grid">
+                  <div class="check-item">Structured learning path</div>
+                  <div class="check-item">AI tutor hints and feedback</div>
+                  <div class="check-item">Hands-on practice and projects</div>
+                  <div class="check-item">Review scheduling and milestones</div>
+                </div>
+
+                <div class="action-row">
+                  <button class="button secondary">Preview Plan</button>
+                  <button class="button primary">Start Learning</button>
+                </div>
+              </div>
+
+              <div class="hero-illustration">
+                <div class="hero-stack">
+                  <div class="hero-orb one"></div>
+                  <div class="hero-orb two"></div>
+                  <div class="hero-panel mini"></div>
+                  <div class="hero-panel note">
+                    <div class="section-label">Session Blueprint</div>
+                    <div class="note-lines">
+                      <div class="note-line"></div>
+                      <div class="note-line"></div>
+                      <div class="note-line"></div>
+                      <div class="note-line"></div>
+                    </div>
+                  </div>
+                  <div class="hero-panel main">
+                    <div class="lambda">λ</div>
+                    <div class="hero-lines">
+                      <div class="hero-line short"></div>
+                      <div class="hero-line long"></div>
+                      <div class="hero-line mid"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="artboard-label">
+          <strong>1. Goal Intake</strong>
+          <span>Onboarding</span>
+        </div>
+      </article>
+
+      <article class="artboard">
+        <div class="artboard-shell">
+          <div class="screen sidebar-shell">
+            <aside class="sidebar-nav">
+              <div class="brand">
+                <span class="brand-mark">A</span>
+                <span>Course Builder</span>
+              </div>
+
+              <div class="nav-group">
+                <div class="nav-pill active"><span class="nav-icon-dot">⌂</span> Home</div>
+                <div class="nav-pill"><span class="nav-icon-dot">◎</span> Program Map</div>
+                <div class="nav-pill"><span class="nav-icon-dot">▣</span> Sessions</div>
+                <div class="nav-pill"><span class="nav-icon-dot">✦</span> AI Tutor</div>
+                <div class="nav-pill"><span class="nav-icon-dot">↺</span> Review</div>
+                <div class="nav-pill"><span class="nav-icon-dot">✎</span> Notes</div>
+              </div>
+
+              <div class="user-card">
+                <div class="avatar"></div>
+                <div>
+                  <div style="font-size:13px;font-weight:650;">Alex Kim</div>
+                  <div class="tiny" style="color:var(--text-sidebar-secondary);">learner</div>
+                </div>
+              </div>
+            </aside>
+
+            <main class="dashboard-main">
+              <div class="headline-row">
+                <div>
+                  <h3>Haskell Journey</h3>
+                  <div class="tiny">Beginner • 1 hr/day</div>
+                </div>
+                <button class="button primary">Resume Session</button>
+              </div>
+
+              <div class="top-metrics">
+                <div class="metric-pill">
+                  <strong>Current Stage</strong>
+                  <div class="metric-main"><span class="badge-circle">1</span> Functions &amp; Types</div>
+                  <span class="tiny">5 / 12 sessions</span>
+                </div>
+                <div class="metric-pill">
+                  <strong>This Week’s Focus</strong>
+                  <div class="metric-main"><span class="badge-circle">◎</span> Type Signatures</div>
+                  <span class="tiny">3 sessions • 2 hr</span>
+                </div>
+                <div class="metric-pill">
+                  <strong>Streak</strong>
+                  <div class="metric-main"><span style="font-size:28px;">🔥</span> 7 days</div>
+                  <span class="tiny">Keep it going</span>
+                </div>
+              </div>
+
+              <div class="dashboard-grid">
+                <section class="card session-card">
+                  <div class="card-title">Today’s Session</div>
+                  <div class="session-card-title">
+                    <div>
+                      <h4>Reading Type Signatures</h4>
+                      <p>Understand how to read and interpret Haskell type signatures.</p>
+                    </div>
+                    <div class="session-icon">λ</div>
+                  </div>
+                  <div class="session-foot">
+                    <div class="tiny">35 min • 3 exercises • 1 checkpoint</div>
+                    <button class="button primary">Continue Session</button>
+                  </div>
+                </section>
+
+                <section class="card">
+                  <div class="card-title">Progress</div>
+                  <strong style="font-size:16px;">Completed Sessions</strong>
+                  <div class="tiny" style="margin-top:4px;">8 / 24 in the current journey</div>
+                  <div class="progress-row">
+                    <div class="progress-dot complete"></div>
+                    <div class="progress-dot complete"></div>
+                    <div class="progress-dot complete"></div>
+                    <div class="progress-dot complete"></div>
+                    <div class="progress-dot current"></div>
+                    <div class="progress-dot"></div>
+                    <div class="progress-dot"></div>
+                    <div class="progress-dot"></div>
+                    <div class="progress-dot"></div>
+                    <div class="progress-dot"></div>
+                  </div>
+                </section>
+              </div>
+
+              <div class="bottom-cards">
+                <section class="small-card">
+                  <div class="card-title">Weak Spots</div>
+                  <strong>Type Classes</strong>
+                  <p>Accuracy is dipping whenever abstractions stop being concrete.</p>
+                  <div class="status-tag warning">50% accuracy</div>
+                  <div class="button secondary" style="width:fit-content;padding:10px 14px;">Review Now</div>
+                </section>
+
+                <section class="small-card">
+                  <div class="card-title">Recommended Review</div>
+                  <strong>Algebraic Data Types</strong>
+                  <p>Last reviewed 5 days ago. Good moment to bring it back before moving on.</p>
+                  <div class="status-tag info">Review queued</div>
+                  <div class="button secondary" style="width:fit-content;padding:10px 14px;">Open Review</div>
+                </section>
+
+                <section class="small-card">
+                  <div class="card-title">Weekly Milestone</div>
+                  <strong>Complete 3 more sessions</strong>
+                  <p>Finish this stage and unlock the next block on type classes and polymorphism.</p>
+                  <div class="milestone-track"><span></span></div>
+                  <div class="tiny">3 / 4 sessions complete</div>
+                </section>
+              </div>
+            </main>
+          </div>
+        </div>
+        <div class="artboard-label">
+          <strong>2. Home Dashboard</strong>
+          <span>Daily Command Center</span>
+        </div>
+      </article>
+
+      <article class="artboard">
+        <div class="artboard-shell">
+          <div class="screen workspace">
+            <aside class="workspace-column steps">
+              <div class="brand" style="font-size:15px;">
+                <span class="brand-mark">A</span>
+                <span>Session 03</span>
+              </div>
+              <ol>
+                <li class="step complete">
+                  <div class="step-index">1</div>
+                  <div>
+                    <strong>Why</strong>
+                    <span>Why this matters</span>
+                  </div>
+                </li>
+                <li class="step complete">
+                  <div class="step-index">2</div>
+                  <div>
+                    <strong>Concept</strong>
+                    <span>Core idea</span>
+                  </div>
+                </li>
+                <li class="step active">
+                  <div class="step-index">3</div>
+                  <div>
+                    <strong>Example</strong>
+                    <span>See it in action</span>
+                  </div>
+                </li>
+                <li class="step">
+                  <div class="step-index">4</div>
+                  <div>
+                    <strong>Practice</strong>
+                    <span>Try it yourself</span>
+                  </div>
+                </li>
+                <li class="step">
+                  <div class="step-index">5</div>
+                  <div>
+                    <strong>Check</strong>
+                    <span>Verify understanding</span>
+                  </div>
+                </li>
+                <li class="step">
+                  <div class="step-index">6</div>
+                  <div>
+                    <strong>Reflect</strong>
+                    <span>Wrap it up</span>
+                  </div>
+                </li>
+              </ol>
+            </aside>
+
+            <main class="workspace-column workspace-main">
+              <div>
+                <div class="tiny">Stage 1 • Session 5 of 12</div>
+                <h3>Reading Type Signatures</h3>
+                <p>Let’s decode a few examples and build intuition for how Haskell describes function behavior.</p>
+              </div>
+
+              <section class="lesson-card">
+                <div class="section-label">Example 1</div>
+                <div class="code-sample">length :: [a] -&gt; Int</div>
+                <div class="explain-grid">
+                  <div class="explain-cell">
+                    <strong>[a]</strong>
+                    <span>List of any type</span>
+                  </div>
+                  <div class="explain-cell">
+                    <strong>-&gt;</strong>
+                    <span>Takes as input</span>
+                  </div>
+                  <div class="explain-cell">
+                    <strong>Int</strong>
+                    <span>Returns an Int</span>
+                  </div>
+                </div>
+              </section>
+
+              <section class="lesson-card">
+                <div class="section-label">Example 2</div>
+                <div class="code-sample">map :: (a -&gt; b) -&gt; [a] -&gt; [b]</div>
+                <div class="explain-grid">
+                  <div class="explain-cell">
+                    <strong>(a -&gt; b)</strong>
+                    <span>Transform one value</span>
+                  </div>
+                  <div class="explain-cell">
+                    <strong>[a]</strong>
+                    <span>Original list</span>
+                  </div>
+                  <div class="explain-cell">
+                    <strong>[b]</strong>
+                    <span>New list</span>
+                  </div>
+                </div>
+              </section>
+
+              <section class="practice-box">
+                <div class="section-label">Practice</div>
+                <p>Fill in the blank to complete the type signature.</p>
+                <code>head :: [a] -&gt; ___</code>
+                <p>Hint: the function returns the first element of a list, not another list.</p>
+                <div class="workspace-actions">
+                  <button class="button primary">Run Check</button>
+                  <button class="button secondary">Need Hint</button>
+                </div>
+              </section>
+            </main>
+
+            <aside class="tutor">
+              <section class="tutor-card">
+                <div class="section-label">AI Tutor</div>
+                <h4>Here’s a hint to get you started</h4>
+                <p>Think about what type of value a function like <code>head</code> returns.</p>
+                <div class="hint-button">Show Hint</div>
+              </section>
+
+              <section class="tutor-card">
+                <div class="section-label">Common Mistakes</div>
+                <p>Confusing input and output types, treating arrows like tuples, or assuming a concrete type too early.</p>
+              </section>
+
+              <section class="tutor-card">
+                <div class="section-label">Your Notes</div>
+                <div class="notes-box">
+                  Type signatures are right-associative. The arrow binds to the right,
+                  so <code>a -&gt; b -&gt; c</code> really means <code>a -&gt; (b -&gt; c)</code>.
+                </div>
+              </section>
+            </aside>
+          </div>
+        </div>
+        <div class="artboard-label">
+          <strong>3. Session Workspace</strong>
+          <span>Main Learning Surface</span>
+        </div>
+      </article>
+
+      <article class="artboard">
+        <div class="artboard-shell">
+          <div class="screen sidebar-shell">
+            <aside class="sidebar-nav">
+              <div class="brand">
+                <span class="brand-mark">A</span>
+                <span>Course Builder</span>
+              </div>
+
+              <div class="nav-group">
+                <div class="nav-pill"><span class="nav-icon-dot">⌂</span> Home</div>
+                <div class="nav-pill active"><span class="nav-icon-dot">◎</span> Program Map</div>
+                <div class="nav-pill"><span class="nav-icon-dot">▣</span> Sessions</div>
+                <div class="nav-pill"><span class="nav-icon-dot">✦</span> AI Tutor</div>
+                <div class="nav-pill"><span class="nav-icon-dot">↺</span> Review</div>
+                <div class="nav-pill"><span class="nav-icon-dot">✎</span> Notes</div>
+              </div>
+
+              <div class="user-card">
+                <div class="avatar"></div>
+                <div>
+                  <div style="font-size:13px;font-weight:650;">Alex Kim</div>
+                  <div class="tiny" style="color:var(--text-sidebar-secondary);">learner</div>
+                </div>
+              </div>
+            </aside>
+
+            <main class="program-main">
+              <div class="headline-row">
+                <div>
+                  <h3>Your Program Map</h3>
+                  <div class="tiny">A personalized path to your goal</div>
+                </div>
+                <button class="button secondary">View as List</button>
+              </div>
+
+              <div class="program-path"></div>
+
+              <div class="program-list">
+                <section class="stage-card current">
+                  <div class="stage-head">
+                    <div>
+                      <div class="tiny">Stage 1</div>
+                      <h4>Functions &amp; Types</h4>
+                      <div class="tiny">Learn the building blocks of Haskell.</div>
+                    </div>
+                    <div class="progress-summary">
+                      <strong>In Progress</strong>
+                      5 / 12 sessions
+                    </div>
+                  </div>
+                  <div class="milestone-track" style="margin-bottom: 14px;"><span style="width:46%;"></span></div>
+                  <div class="session-list">
+                    <div class="session-row complete">
+                      <div class="num">✓</div>
+                      <div>Introduction to Haskell</div>
+                      <div class="tiny">25 min</div>
+                    </div>
+                    <div class="session-row complete">
+                      <div class="num">✓</div>
+                      <div>Values, Expressions, and Types</div>
+                      <div class="tiny">28 min</div>
+                    </div>
+                    <div class="session-row complete">
+                      <div class="num">✓</div>
+                      <div>Type Signatures</div>
+                      <div class="tiny">32 min</div>
+                    </div>
+                    <div class="session-row current">
+                      <div class="num">4</div>
+                      <div>Reading Type Signatures</div>
+                      <div class="tiny">In progress</div>
+                    </div>
+                    <div class="session-row">
+                      <div class="num">5</div>
+                      <div>Let Bindings</div>
+                      <div class="tiny">30 min</div>
+                    </div>
+                  </div>
+                </section>
+
+                <div class="lock-row">
+                  <span>Stage 2 • Type Classes &amp; Polymorphism</span>
+                  <span class="status-tag">Locked</span>
+                </div>
+                <div class="lock-row">
+                  <span>Stage 3 • Algebraic Data Types</span>
+                  <span class="status-tag">Locked</span>
+                </div>
+                <div class="lock-row">
+                  <span>Stage 4 • Monads &amp; Effects</span>
+                  <span class="status-tag">Locked</span>
+                </div>
+              </div>
+
+              <section class="goal-card">
+                <div style="display:flex;align-items:center;gap:14px;">
+                  <div class="badge-circle">🎓</div>
+                  <div>
+                    <h4>Graduation Goal</h4>
+                    <p>Build real-world projects and ship a small Haskell portfolio.</p>
+                  </div>
+                </div>
+                <div class="button secondary">0 / 4 projects</div>
+              </section>
+            </main>
+          </div>
+        </div>
+        <div class="artboard-label">
+          <strong>4. Program Map</strong>
+          <span>Route Visibility</span>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const toggle = document.getElementById("theme-toggle");
+
+    toggle.addEventListener("click", () => {
+      const next = root.dataset.theme === "light" ? "dark" : "light";
+      root.dataset.theme = next;
+      toggle.textContent = next === "light" ? "Switch to Dark" : "Switch to Light";
+    });
+  </script>
+</body>
+</html>

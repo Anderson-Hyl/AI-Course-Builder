@@ -1,0 +1,175 @@
+name: AICourseBuilder
+
+options:
+  bundleIdPrefix: com.stareraadaspace
+  deploymentTarget:
+    macOS: "26.0"
+    iOS: "26.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.2"
+    SWIFT_STRICT_CONCURRENCY: complete
+
+packages:
+  AICourseBuilderPackage:
+    path: AICourseBuilderPackage
+  swift-dependencies:
+    url: https://github.com/pointfreeco/swift-dependencies
+    from: 1.0.0
+  swift-composable-architecture:
+    url: https://github.com/pointfreeco/swift-composable-architecture
+    from: 1.0.0
+
+targets:
+  # Native macOS build — DEVELOPMENT-ONLY, never archived for distribution.
+  # Will host the Claude Code CLI provider (spawns `claude --print` via
+  # Foundation's Process) when ChatClients lands. The CLI subprocess is
+  # incompatible with the App Sandbox required for Mac App Store, which is
+  # fine because we ship the iPad target's "Mac (Designed for iPad)"
+  # destination instead. Use this scheme locally for fast LLM iteration.
+  AICourseBuilder:
+    type: application
+    platform: macOS
+    sources:
+      - path: AICourseBuilder
+        excludes:
+          - "*.plist"
+          - "*.entitlements"
+    dependencies:
+      - package: AICourseBuilderPackage
+        product: AppFeature
+      - package: AICourseBuilderPackage
+        product: LearningDatabase
+      - package: AICourseBuilderPackage
+        product: LearningRepository
+      - package: swift-dependencies
+        product: Dependencies
+      - package: swift-composable-architecture
+        product: ComposableArchitecture
+    info:
+      path: AICourseBuilder/Info.plist
+      properties:
+        CFBundleName: $(PRODUCT_NAME)
+        CFBundleDisplayName: AI Course Builder
+        CFBundleShortVersionString: "0.1"
+        CFBundleVersion: "1"
+        # Modern macOS apps source the icon from the asset catalog via
+        # `CFBundleIconName` — without this key Finder / Dock fall back
+        # to the generic blank-document icon even when the asset is
+        # compiled into Assets.car. Must match the appiconset name.
+        CFBundleIconName: AppIcon
+        LSApplicationCategoryType: public.app-category.education
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSHumanReadableCopyright: ""
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.stareraadaspace.ai-course-builder
+        PRODUCT_NAME: AICourseBuilder
+        MACOSX_DEPLOYMENT_TARGET: "26.0"
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_STYLE: Automatic
+        # Apple Developer team ID — same as SlideFlow. Required for
+        # iCloud / Push entitlements to provision later; with `""` Xcode
+        # falls back to ad-hoc signing and entitlements are ignored.
+        DEVELOPMENT_TEAM: "J24ZKG6Q2X"
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        Debug:
+          CODE_SIGN_ENTITLEMENTS: AICourseBuilder/AICourseBuilder.entitlements
+        Release:
+          CODE_SIGN_ENTITLEMENTS: AICourseBuilder/AICourseBuilder-Release.entitlements
+
+  # iPadOS build — the App Store binary. Runs natively on iPad and on
+  # Apple Silicon Macs via "Mac (Designed for iPad)". Shares the same
+  # source directory as the macOS target; `#if os(macOS)` gates pick the
+  # right code path per platform when the LLM provider lands. The Claude
+  # Code CLI provider (spawns Foundation's Process) is incompatible with
+  # the iOS App Sandbox the App Store requires — Anthropic API direct is
+  # the iPad path.
+  #
+  # TARGETED_DEVICE_FAMILY="2" restricts to iPad — no iPhone.
+  # `SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: YES` lets this iPad binary
+  # also run on Apple Silicon Macs as a native-ish app — that's the
+  # planned Mac distribution path; we don't ship a separate macOS
+  # build to the App Store.
+  AICourseBuilder-iPad:
+    type: application
+    platform: iOS
+    sources:
+      - path: AICourseBuilder
+        excludes:
+          - "*.plist"
+          - "*.entitlements"
+    dependencies:
+      - package: AICourseBuilderPackage
+        product: AppFeature
+      - package: AICourseBuilderPackage
+        product: LearningDatabase
+      - package: AICourseBuilderPackage
+        product: LearningRepository
+      - package: swift-dependencies
+        product: Dependencies
+      - package: swift-composable-architecture
+        product: ComposableArchitecture
+    info:
+      path: AICourseBuilder/Info-iPad.plist
+      properties:
+        CFBundleName: $(PRODUCT_NAME)
+        CFBundleDisplayName: AI Course Builder
+        CFBundleShortVersionString: "0.1"
+        CFBundleVersion: "1"
+        # iOS / iPadOS likewise pulls the icon from the asset catalog
+        # via `CFBundleIconName` — without it Springboard shows a blank.
+        CFBundleIconName: AppIcon
+        LSApplicationCategoryType: public.app-category.education
+        LSRequiresIPhoneOS: true
+        MinimumOSVersion: $(IPHONEOS_DEPLOYMENT_TARGET)
+        UILaunchScreen:
+          UIColorName: ""
+        UIApplicationSupportsIndirectInputEvents: true
+        # Required for `openWindow(id:)` to spawn auxiliary scenes
+        # (Settings sheet, Tutor panel detached window, etc.) when those
+        # land. Without this flag UIKit treats the app as single-scene-
+        # only and SwiftUI's `openWindow` call throws at runtime.
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+        UIRequiredDeviceCapabilities:
+          - arm64
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.stareraadaspace.ai-course-builder
+        PRODUCT_NAME: AICourseBuilder
+        IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+        TARGETED_DEVICE_FAMILY: "2"
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: YES
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
+        CODE_SIGN_STYLE: Automatic
+        # Same DEVELOPMENT_TEAM as the macOS target — see comment above.
+        DEVELOPMENT_TEAM: "J24ZKG6Q2X"
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        Debug:
+          CODE_SIGN_ENTITLEMENTS: AICourseBuilder/AICourseBuilder-iPad.entitlements
+        Release:
+          CODE_SIGN_ENTITLEMENTS: AICourseBuilder/AICourseBuilder-iPad-Release.entitlements
+
+schemes:
+  AICourseBuilder-iPad:
+    build:
+      targets:
+        AICourseBuilder-iPad: all
+  AICourseBuilder:
+    build:
+      targets:
+        AICourseBuilder: all
