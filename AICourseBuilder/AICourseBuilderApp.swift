@@ -73,4 +73,16 @@ struct AppLearningMutationObserver: LearningMutationObserver {
             AppDelegateBridge.store?.send(.goalReset)
         }
     }
+
+    func didCreateProgram(_ id: UUID, goalID: UUID) async {
+        await MainActor.run {
+            AppDelegateBridge.store?.send(.programCreated(id, goalID: goalID))
+        }
+    }
+
+    func didChangeSessions(programID: UUID) async {
+        await MainActor.run {
+            AppDelegateBridge.store?.send(.sessionsChanged(programID: programID))
+        }
+    }
 }

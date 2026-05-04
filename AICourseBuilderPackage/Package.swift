@@ -119,6 +119,7 @@ let package = Package(
                 "LearningDatabase",
                 "LearningRepository",
                 "LearningUI",
+                "LessonRendering",
                 .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
                 .product(name: "SQLiteData", package: "sqlite-data"),
             ]

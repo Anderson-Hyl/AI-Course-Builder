@@ -128,6 +128,305 @@ public struct LearningRepository: Sendable {
         }
         await observer.didDeleteGoal(id)
     }
+
+    // MARK: - Programs
+
+    public func fetchProgram(forGoalID goalID: LearningGoal.ID) async throws -> ProgramBlueprint? {
+        try await database.read { db in
+            try ProgramBlueprint
+                .where { $0.goalID.eq(goalID) }
+                .fetchOne(db)
+        }
+    }
+
+    @discardableResult
+    public func createProgram(
+        goalID: LearningGoal.ID,
+        summary: String,
+        durationWeeks: Int? = nil
+    ) async throws -> ProgramBlueprint.ID {
+        let id = UUID()
+        try await database.write { db in
+            try ProgramBlueprint.insert {
+                ProgramBlueprint.Draft(
+                    id: id,
+                    goalID: goalID,
+                    summary: summary,
+                    durationWeeks: durationWeeks
+                )
+            }
+            .execute(db)
+        }
+        await observer.didCreateProgram(id, goalID: goalID)
+        return id
+    }
+
+    // MARK: - Stages / Sprints
+
+    @discardableResult
+    public func createStage(
+        programID: ProgramBlueprint.ID,
+        order: Int = 1,
+        title: String,
+        intent: String,
+        status: String = Stage.Status.inProgress
+    ) async throws -> Stage.ID {
+        let id = UUID()
+        try await database.write { db in
+            try Stage.insert {
+                Stage.Draft(
+                    id: id,
+                    programID: programID,
+                    order: order,
+                    title: title,
+                    intent: intent,
+                    status: status
+                )
+            }
+            .execute(db)
+        }
+        return id
+    }
+
+    @discardableResult
+    public func createSprint(
+        stageID: Stage.ID,
+        order: Int = 1,
+        title: String,
+        focus: String,
+        status: String = Sprint.Status.inProgress
+    ) async throws -> Sprint.ID {
+        let id = UUID()
+        try await database.write { db in
+            try Sprint.insert {
+                Sprint.Draft(
+                    id: id,
+                    stageID: stageID,
+                    order: order,
+                    title: title,
+                    focus: focus,
+                    status: status
+                )
+            }
+            .execute(db)
+        }
+        return id
+    }
+
+    // MARK: - Sessions
+
+    @discardableResult
+    public func createSession(
+        sprintID: Sprint.ID,
+        order: Int = 1,
+        title: String,
+        objective: String,
+        estimatedMinutes: Int = 15,
+        status: String = Session.Status.notStarted
+    ) async throws -> Session.ID {
+        let id = UUID()
+        let programID = try await database.write { db -> ProgramBlueprint.ID in
+            try Session.insert {
+                Session.Draft(
+                    id: id,
+                    sprintID: sprintID,
+                    order: order,
+                    title: title,
+                    objective: objective,
+                    estimatedMinutes: estimatedMinutes,
+                    status: status
+                )
+            }
+            .execute(db)
+            return try Self.programID(forSprintID: sprintID, db: db)
+        }
+        await observer.didChangeSessions(programID: programID)
+        return id
+    }
+
+    public func fetchSessions(forProgramID programID: ProgramBlueprint.ID) async throws -> [Session] {
+        try await database.read { db in
+            // Two-step type-safe walk: stages → sprints → sessions, ordered
+            // by stage.order, sprint.order, session.order. The demo has
+            // exactly one stage / one sprint, so this stays cheap; when
+            // the planner produces more we can swap in a single-#sql
+            // join with a `@Selection` projection.
+            let stages = try Stage
+                .where { $0.programID.eq(programID) }
+                .order { $0.order }
+                .fetchAll(db)
+            var ordered: [Session] = []
+            for stage in stages {
+                let sprints = try Sprint
+                    .where { $0.stageID.eq(stage.id) }
+                    .order { $0.order }
+                    .fetchAll(db)
+                for sprint in sprints {
+                    let sessions = try Session
+                        .where { $0.sprintID.eq(sprint.id) }
+                        .order { $0.order }
+                        .fetchAll(db)
+                    ordered.append(contentsOf: sessions)
+                }
+            }
+            return ordered
+        }
+    }
+
+    public func fetchSession(id: Session.ID) async throws -> Session? {
+        try await database.read { db in
+            try Session.find(id).fetchOne(db)
+        }
+    }
+
+    public func fetchStage(id: Stage.ID) async throws -> Stage? {
+        try await database.read { db in
+            try Stage.find(id).fetchOne(db)
+        }
+    }
+
+    public func fetchSprint(id: Sprint.ID) async throws -> Sprint? {
+        try await database.read { db in
+            try Sprint.find(id).fetchOne(db)
+        }
+    }
+
+    public func fetchStages(forProgramID programID: ProgramBlueprint.ID) async throws -> [Stage] {
+        try await database.read { db in
+            try Stage
+                .where { $0.programID.eq(programID) }
+                .order { $0.order }
+                .fetchAll(db)
+        }
+    }
+
+    public func fetchSprints(forStageID stageID: Stage.ID) async throws -> [Sprint] {
+        try await database.read { db in
+            try Sprint
+                .where { $0.stageID.eq(stageID) }
+                .order { $0.order }
+                .fetchAll(db)
+        }
+    }
+
+    // MARK: - Session blocks
+
+    /// Inserts blocks in `order`-ascending order so the first row's
+    /// trigger-stamped order lands at 1 (no siblings yet) and subsequent
+    /// rows bypass the trigger entirely. See Schema.swift's INSERT-trigger
+    /// note: the trigger only fires `WHEN new.order = 1`, so out-of-order
+    /// insertion of the order=1 row would re-stamp it to MAX+1.
+    @discardableResult
+    public func createSessionBlocks(_ blocks: [SessionBlock]) async throws -> [SessionBlock.ID] {
+        let sorted = blocks.sorted { $0.order < $1.order }
+        let touchedProgramIDs: Set<ProgramBlueprint.ID> = try await database.write { db in
+            for block in sorted {
+                try SessionBlock.insert {
+                    SessionBlock.Draft(
+                        id: block.id,
+                        sessionID: block.sessionID,
+                        order: block.order,
+                        kind: block.kind,
+                        schemaVersion: block.schemaVersion,
+                        payloadJSON: block.payloadJSON
+                    )
+                }
+                .execute(db)
+            }
+            var programs: Set<ProgramBlueprint.ID> = []
+            for sessionID in Set(sorted.map(\.sessionID)) {
+                if let programID = try? Self.programID(forSessionID: sessionID, db: db) {
+                    programs.insert(programID)
+                }
+            }
+            return programs
+        }
+        for programID in touchedProgramIDs {
+            await observer.didChangeSessions(programID: programID)
+        }
+        return sorted.map(\.id)
+    }
+
+    public func fetchBlocks(forSessionID sessionID: Session.ID) async throws -> [SessionBlock] {
+        try await database.read { db in
+            try SessionBlock
+                .where { $0.sessionID.eq(sessionID) }
+                .order { $0.order }
+                .fetchAll(db)
+        }
+    }
+
+    // MARK: - Demo seed
+
+    /// Idempotent: returns the existing program for `goalID` if one
+    /// exists, otherwise builds the Haskell demo blueprint (1 program →
+    /// 1 stage → 1 sprint → 1 session → 10 blocks) by calling the
+    /// underlying mutators so observer hooks fire uniformly. The block
+    /// payloads come from `DemoBlueprint.blocks(forSession:)` — a
+    /// production-side mirror of `LessonRendering.Fixtures.haskellSessionBlocks`
+    /// that doesn't pull SwiftUI into this module.
+    @discardableResult
+    public func installDemoProgram(goalID: LearningGoal.ID) async throws -> ProgramBlueprint.ID {
+        if let existing = try await fetchProgram(forGoalID: goalID) {
+            return existing.id
+        }
+        let programID = try await createProgram(
+            goalID: goalID,
+            summary: DemoBlueprint.summary
+        )
+        let stageID = try await createStage(
+            programID: programID,
+            title: DemoBlueprint.stageTitle,
+            intent: DemoBlueprint.stageIntent,
+            status: Stage.Status.inProgress
+        )
+        let sprintID = try await createSprint(
+            stageID: stageID,
+            title: DemoBlueprint.sprintTitle,
+            focus: DemoBlueprint.sprintFocus,
+            status: Sprint.Status.inProgress
+        )
+        let sessionID = try await createSession(
+            sprintID: sprintID,
+            title: DemoBlueprint.sessionTitle,
+            objective: DemoBlueprint.sessionObjective,
+            estimatedMinutes: DemoBlueprint.sessionEstimatedMinutes
+        )
+        try await createSessionBlocks(
+            DemoBlueprint.blocks(forSession: sessionID)
+        )
+        return programID
+    }
+
+    // MARK: - Internal helpers
+
+    /// Walks sprint → stage → program inside an open transaction so
+    /// observer hook payloads stay consistent with the row that just
+    /// committed. Throws `LearningRepositoryError.sprintNotFound` /
+    /// `.stageNotFound` if either parent row is missing — should only
+    /// happen if a caller hands in a stale or fabricated FK.
+    fileprivate static func programID(
+        forSprintID sprintID: Sprint.ID,
+        db: Database
+    ) throws -> ProgramBlueprint.ID {
+        guard let sprint = try Sprint.find(sprintID).fetchOne(db) else {
+            throw LearningRepositoryError.sprintNotFound(sprintID)
+        }
+        guard let stage = try Stage.find(sprint.stageID).fetchOne(db) else {
+            throw LearningRepositoryError.stageNotFound(sprint.stageID)
+        }
+        return stage.programID
+    }
+
+    fileprivate static func programID(
+        forSessionID sessionID: Session.ID,
+        db: Database
+    ) throws -> ProgramBlueprint.ID {
+        guard let session = try Session.find(sessionID).fetchOne(db) else {
+            throw LearningRepositoryError.sessionNotFound(sessionID)
+        }
+        return try programID(forSprintID: session.sprintID, db: db)
+    }
 }
 
 /// Errors thrown by `LearningRepository`. Callers don't switch on these
@@ -139,4 +438,7 @@ public enum LearningRepositoryError: Error, Sendable {
     case profileBootstrapFailed
     case goalNotFound(LearningGoal.ID)
     case programNotFound(ProgramBlueprint.ID)
+    case sprintNotFound(Sprint.ID)
+    case stageNotFound(Stage.ID)
+    case sessionNotFound(Session.ID)
 }

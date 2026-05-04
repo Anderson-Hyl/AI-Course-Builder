@@ -4,27 +4,25 @@ import LearningModels
 import LearningRepository
 
 /// Top-level coordinator. Owns the bootstrap path (ensure a `LearnerProfile`
-/// exists, fetch any active `LearningGoal`) and the root navigation
-/// state. Currently routes between Goal Intake and a placeholder Home
-/// stub; will grow to host Home Dashboard / Session Workspace / Program
-/// Map / Review Vault as those screens land.
+/// exists, fetch any active `LearningGoal`, install or recover the demo
+/// program) and the root navigation state. Routes between Goal Intake,
+/// the Home Dashboard, and the Session Workspace destination.
 @Reducer
 public struct AppFeature {
+    @Reducer
+    public enum Destination {
+        case sessionWorkspace(SessionWorkspaceFeature)
+    }
+
     @ObservableState
     public struct State: Equatable {
-        /// Until bootstrap completes we render a `ProgressView` so the UI
-        /// doesn't briefly flash Goal Intake before recognizing a
-        /// persisted goal exists.
         public var isBootstrapping: Bool = true
-        /// Current device-local profile. Set during bootstrap.
         public var profile: LearnerProfile?
-        /// Active goal (if any). When nil, the user sees Goal Intake.
-        /// When set, the user sees the placeholder Home stub.
         public var currentGoal: LearningGoal?
-        /// Form state for the Goal Intake screen. Always present so a
-        /// reset preserves field defaults; the view only displays it
-        /// when `currentGoal == nil`.
+        public var currentProgram: ProgramBlueprint?
         public var goalIntake: GoalIntakeFeature.State = .init()
+        public var home: HomeFeature.State = .init()
+        @Presents public var destination: Destination.State?
 
         public init() {}
     }
@@ -34,14 +32,27 @@ public struct AppFeature {
         case bootstrapCompleted(profile: LearnerProfile, goal: LearningGoal?)
         case bootstrapFailed(String)
         case goalIntake(GoalIntakeFeature.Action)
-        /// Fired by the app-level `LearningMutationObserver` after
-        /// `LearningRepository.createGoal` commits. Reducer reloads the
-        /// goal row so the placeholder Home stub has the persisted text.
+        case home(HomeFeature.Action)
+        case destination(PresentationAction<Destination.Action>)
+        /// Fired by the app-level observer after `createGoal` commits.
         case goalCreated(LearningGoal.ID)
-        /// Fired by the app-level observer after `deleteGoal` commits.
-        /// Returns the user to Goal Intake.
+        /// Fired after `deleteGoal` commits — returns the user to Goal Intake.
         case goalReset
-        /// User tapped Reset on the placeholder Home stub.
+        /// Internal: install (idempotent) + load the program for the
+        /// current goal, then transition the user to Home Dashboard.
+        case loadProgramForGoal(LearningGoal.ID)
+        /// Internal: program row finished loading — wire it into Home and
+        /// kick off the home loader.
+        case programLoaded(ProgramBlueprint)
+        /// Internal: surfaces error state when program install/load fails.
+        case programLoadFailed(String)
+        /// Fired by the app-level observer after a program write commits.
+        /// The `loadProgramForGoal` flow drives the v1 path; this hook
+        /// stays here for engine-driven writes that arrive in later passes.
+        case programCreated(ProgramBlueprint.ID, goalID: UUID)
+        /// Fired by the app-level observer after sessions change. Drives
+        /// a Home reload when the change targets the active program.
+        case sessionsChanged(programID: UUID)
         case resetTapped
     }
 
@@ -52,6 +63,9 @@ public struct AppFeature {
     public var body: some ReducerOf<Self> {
         Scope(state: \.goalIntake, action: \.goalIntake) {
             GoalIntakeFeature()
+        }
+        Scope(state: \.home, action: \.home) {
+            HomeFeature()
         }
         Reduce { state, action in
             switch action {
@@ -71,20 +85,19 @@ public struct AppFeature {
                 state.isBootstrapping = false
                 state.profile = profile
                 state.currentGoal = goal
+                state.home.goal = goal
                 // Seed the form with profile defaults so re-opening Goal
-                // Intake (after a Reset) starts from where the user left
-                // off rather than full defaults.
+                // Intake (after a Reset) starts from where the user left off.
                 state.goalIntake.startingLevel = profile.startingLevel
                 state.goalIntake.weeklyTimeBudgetHours = profile.weeklyTimeBudgetHours
                 state.goalIntake.learningStyles = profile.learningStyles
                 state.goalIntake.targetOutcome = profile.targetOutcome ?? ""
+                if let goal {
+                    return .send(.loadProgramForGoal(goal.id))
+                }
                 return .none
 
             case .bootstrapFailed:
-                // Surface bootstrap failures by leaving `isBootstrapping`
-                // true and letting the UI render an inline error. We
-                // don't have a toast surface yet — log + render-state
-                // gating is enough for a v1 bootstrap.
                 state.isBootstrapping = false
                 return .none
 
@@ -103,8 +116,7 @@ public struct AppFeature {
                         profileID: profileID,
                         text: intake.goalText
                     )
-                    // Observer dispatches `.goalCreated` once the write
-                    // commits — nothing more to do from this effect.
+                    // Observer dispatches `.goalCreated`.
                 }
 
             case .goalIntake:
@@ -119,6 +131,61 @@ public struct AppFeature {
                     }
                 }
 
+            case .loadProgramForGoal(let goalID):
+                return .run { [repository] send in
+                    do {
+                        // Idempotent — returns existing program if one
+                        // already exists for the goal, otherwise builds
+                        // the demo blueprint. Either way fetch the row
+                        // afterwards so Home has the up-to-date summary.
+                        _ = try await repository.installDemoProgram(goalID: goalID)
+                        if let program = try await repository.fetchProgram(forGoalID: goalID) {
+                            await send(.programLoaded(program))
+                        } else {
+                            await send(.programLoadFailed("Program not found after install"))
+                        }
+                    } catch {
+                        await send(.programLoadFailed(error.localizedDescription))
+                    }
+                }
+
+            case .programLoaded(let program):
+                state.currentProgram = program
+                state.home.goal = state.currentGoal
+                state.home.program = program
+                return .send(.home(.onAppear(programID: program.id)))
+
+            case .programLoadFailed(let message):
+                state.home.loadFailure = message
+                return .none
+
+            case .programCreated:
+                // Observer-driven hook; covered by `loadProgramForGoal`
+                // for the current Goal Intake → Home flow. Future
+                // engine-originated writes will exercise this directly.
+                return .none
+
+            case .sessionsChanged(let programID):
+                guard state.currentProgram?.id == programID else { return .none }
+                return .send(.home(.onAppear(programID: programID)))
+
+            case .home(.delegate(.sessionTapped(let id))):
+                state.destination = .sessionWorkspace(SessionWorkspaceFeature.State(sessionID: id))
+                return .none
+
+            case .home(.delegate(.resetTapped)):
+                return .send(.resetTapped)
+
+            case .home:
+                return .none
+
+            case .destination(.presented(.sessionWorkspace(.delegate(.dismiss)))):
+                state.destination = nil
+                return .none
+
+            case .destination:
+                return .none
+
             case .resetTapped:
                 guard let goalID = state.currentGoal?.id else { return .none }
                 return .run { [repository] _ in
@@ -128,11 +195,11 @@ public struct AppFeature {
 
             case .goalReset:
                 state.currentGoal = nil
+                state.currentProgram = nil
+                state.home = HomeFeature.State()
+                state.destination = nil
                 state.goalIntake = GoalIntakeFeature.State()
                 if let profile = state.profile {
-                    // Re-seed defaults from the persisted profile so
-                    // the form remembers the user's last chosen settings
-                    // even though the goal text resets to empty.
                     state.goalIntake.startingLevel = profile.startingLevel
                     state.goalIntake.weeklyTimeBudgetHours = profile.weeklyTimeBudgetHours
                     state.goalIntake.learningStyles = profile.learningStyles
@@ -141,6 +208,7 @@ public struct AppFeature {
                 return .none
             }
         }
+        .ifLet(\.$destination, action: \.destination)
     }
 
 }
@@ -161,3 +229,5 @@ private enum LearningRepositoryKey: DependencyKey {
     static let liveValue = LearningRepository()
     static let testValue = LearningRepository()
 }
+
+extension AppFeature.Destination.State: Equatable {}
