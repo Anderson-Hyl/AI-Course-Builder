@@ -5,8 +5,19 @@ import Textual
 
 struct MultipleChoiceBlockView: View {
     let payload: BlockPayload.MultipleChoice
+    /// Persisted (or optimistic in-flight) selection — drives both the
+    /// option highlight and the correctness badge. Nil means the learner
+    /// hasn't picked yet for this block.
+    let selectedIndex: Int?
+    /// Evaluator verdict for the latest attempt. Drives the correct/
+    /// incorrect badge + explanation surface.
+    let result: AttemptResult.MultipleChoice?
+    /// Fired on each tap. The reducer above persists the attempt and
+    /// optimistically updates `selectedIndex` + `result` so the UI
+    /// reflects the choice on the same frame.
+    let onSelect: (Int) -> Void
+
     @Environment(\.theme) private var theme
-    @State private var selected: Int?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -21,16 +32,15 @@ struct MultipleChoiceBlockView: View {
                 }
             }
 
-            if let selected {
-                let correct = selected == payload.correctIndex
+            if let result {
                 HStack(spacing: 8) {
-                    Image(systemName: correct ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundStyle(correct ? theme.state.success : theme.state.warning)
-                    Text(correct ? "Correct" : "Try again")
+                    Image(systemName: result.correct ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(result.correct ? theme.state.success : theme.state.warning)
+                    Text(result.correct ? "Correct" : "Try again")
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(theme.text.primary)
                 }
-                if let explanation = payload.explanation {
+                if let explanation = result.feedback ?? payload.explanation {
                     InlineText(markdown: explanation, syntaxExtensions: [.math])
                         .font(.callout)
                         .foregroundStyle(theme.text.secondary)
@@ -47,9 +57,9 @@ struct MultipleChoiceBlockView: View {
     }
 
     private func optionRow(index: Int, option: String) -> some View {
-        let isSelected = selected == index
+        let isSelected = selectedIndex == index
         return Button {
-            selected = index
+            onSelect(index)
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: isSelected ? "circle.fill" : "circle")
@@ -70,13 +80,50 @@ struct MultipleChoiceBlockView: View {
     }
 }
 
-#Preview("MultipleChoice") {
-    MultipleChoiceBlockView(payload: .init(
-        question: "Which of these is a pure function?",
-        options: ["putStrLn \"hi\"", "getCurrentTime", "\\x -> x * x", "readFile \"a\""],
-        correctIndex: 2,
-        explanation: "Only the third option is pure — it depends solely on its argument."
-    ))
+#Preview("MultipleChoice — pristine") {
+    MultipleChoiceBlockView(
+        payload: .init(
+            question: "Which of these is a pure function?",
+            options: ["putStrLn \"hi\"", "getCurrentTime", "\\x -> x * x", "readFile \"a\""],
+            correctIndex: 2,
+            explanation: "Only the third option is pure — it depends solely on its argument."
+        ),
+        selectedIndex: nil,
+        result: nil,
+        onSelect: { _ in }
+    )
+    .padding()
+    .background(CourseBuilderThemePalette.mvp.surface.appCanvas)
+}
+
+#Preview("MultipleChoice — correct") {
+    MultipleChoiceBlockView(
+        payload: .init(
+            question: "Which of these is a pure function?",
+            options: ["putStrLn \"hi\"", "getCurrentTime", "\\x -> x * x", "readFile \"a\""],
+            correctIndex: 2,
+            explanation: "Only the third option is pure — it depends solely on its argument."
+        ),
+        selectedIndex: 2,
+        result: .init(correct: true, score: 1.0, feedback: "Only the third option is pure — it depends solely on its argument."),
+        onSelect: { _ in }
+    )
+    .padding()
+    .background(CourseBuilderThemePalette.mvp.surface.appCanvas)
+}
+
+#Preview("MultipleChoice — incorrect") {
+    MultipleChoiceBlockView(
+        payload: .init(
+            question: "Which of these is a pure function?",
+            options: ["putStrLn \"hi\"", "getCurrentTime", "\\x -> x * x", "readFile \"a\""],
+            correctIndex: 2,
+            explanation: "Only the third option is pure — it depends solely on its argument."
+        ),
+        selectedIndex: 0,
+        result: .init(correct: false, score: 0.0, feedback: "Only the third option is pure — it depends solely on its argument."),
+        onSelect: { _ in }
+    )
     .padding()
     .background(CourseBuilderThemePalette.mvp.surface.appCanvas)
 }

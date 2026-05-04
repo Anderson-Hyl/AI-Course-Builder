@@ -120,6 +120,7 @@ let package = Package(
                 "LearningRepository",
                 "LearningUI",
                 "LessonRendering",
+                "EvaluationEngine",
                 .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
                 .product(name: "SQLiteData", package: "sqlite-data"),
             ]
@@ -128,6 +129,7 @@ let package = Package(
             name: "AICourseBuilderPackageTests",
             dependencies: [
                 "AppFeature",
+                "EvaluationEngine",
                 "LearningDatabase",
                 "LearningModels",
                 "LearningRepository",

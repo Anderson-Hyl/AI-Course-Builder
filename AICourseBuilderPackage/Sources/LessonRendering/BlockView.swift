@@ -7,11 +7,17 @@ import SwiftUI
 /// `BlockDispatch.resolve(_:)`; unknown kinds, unsupported schema
 /// versions, and malformed payloads each surface a distinct
 /// placeholder so failures are loud rather than silent.
+///
+/// Interactive blocks consume the optional `interactions` bundle —
+/// today that's `multiple_choice` selection + result. Other interactive
+/// kinds extend `BlockInteractions` as their attempt-capture paths land.
 public struct BlockView: View {
     public let block: SessionBlock
+    public let interactions: BlockInteractions
 
-    public init(block: SessionBlock) {
+    public init(block: SessionBlock, interactions: BlockInteractions = .init()) {
         self.block = block
+        self.interactions = interactions
     }
 
     public var body: some View {
@@ -39,11 +45,45 @@ public struct BlockView: View {
         case .concept(let p): ConceptBlockView(payload: p)
         case .example(let p): ExampleBlockView(payload: p)
         case .codeExercise(let p): CodeExerciseBlockView(payload: p)
-        case .multipleChoice(let p): MultipleChoiceBlockView(payload: p)
+        case .multipleChoice(let p):
+            MultipleChoiceBlockView(
+                payload: p,
+                selectedIndex: interactions.multipleChoice?.selectedIndex,
+                result: interactions.multipleChoice?.result,
+                onSelect: interactions.multipleChoice?.onSelect ?? { _ in }
+            )
         case .shortAnswer(let p): ShortAnswerBlockView(payload: p)
         case .reflection(let p): ReflectionBlockView(payload: p)
         case .checkpoint(let p): CheckpointBlockView(payload: p)
         case .reviewCard(let p): ReviewCardBlockView(payload: p)
+        }
+    }
+}
+
+/// Per-kind interaction state for `BlockView`. Add a new bucket per
+/// interactive block kind as it gets attempt capture wired in. Default
+/// `init()` produces no interactions — non-interactive callers (Previews,
+/// program-map summaries, etc.) keep the same call site they had.
+public struct BlockInteractions {
+    public var multipleChoice: MultipleChoiceInteraction?
+
+    public init(multipleChoice: MultipleChoiceInteraction? = nil) {
+        self.multipleChoice = multipleChoice
+    }
+
+    public struct MultipleChoiceInteraction {
+        public let selectedIndex: Int?
+        public let result: AttemptResult.MultipleChoice?
+        public let onSelect: (Int) -> Void
+
+        public init(
+            selectedIndex: Int?,
+            result: AttemptResult.MultipleChoice?,
+            onSelect: @escaping (Int) -> Void
+        ) {
+            self.selectedIndex = selectedIndex
+            self.result = result
+            self.onSelect = onSelect
         }
     }
 }

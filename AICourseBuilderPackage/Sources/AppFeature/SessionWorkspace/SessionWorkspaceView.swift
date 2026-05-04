@@ -1,4 +1,5 @@
 import ComposableArchitecture
+import Foundation
 import LearningModels
 import LessonRendering
 import SwiftUI
@@ -20,7 +21,10 @@ public struct SessionWorkspaceView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     headerSection
                     if let block = store.currentBlock {
-                        BlockView(block: block)
+                        BlockView(
+                            block: block,
+                            interactions: interactions(for: block)
+                        )
                     } else if let message = store.loadFailure {
                         errorView(message)
                     } else if !store.blocks.isEmpty {
@@ -140,6 +144,38 @@ public struct SessionWorkspaceView: View {
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity)
         .background(.bar)
+    }
+}
+
+private extension SessionWorkspaceView {
+    /// Builds the per-kind interaction bundle for a block. For
+    /// `multiple_choice`, decodes the latest stored attempt so the view
+    /// shows the prior selection + verdict on revisit. The `onSelect`
+    /// closure dispatches back into the reducer, which evaluates +
+    /// persists the new attempt.
+    func interactions(for block: SessionBlock) -> BlockInteractions {
+        switch block.kind {
+        case BlockKind.multipleChoice:
+            let attempt = store.attempts[block.id]
+            let input = attempt
+                .flatMap { $0.inputJSON.data(using: .utf8) }
+                .flatMap { try? JSONDecoder().decode(AttemptInput.MultipleChoice.self, from: $0) }
+            let result = attempt
+                .flatMap(\.resultJSON)
+                .flatMap { $0.data(using: .utf8) }
+                .flatMap { try? JSONDecoder().decode(AttemptResult.MultipleChoice.self, from: $0) }
+            return BlockInteractions(
+                multipleChoice: .init(
+                    selectedIndex: input?.selectedIndex,
+                    result: result,
+                    onSelect: { index in
+                        store.send(.multipleChoiceSelected(blockID: block.id, index: index))
+                    }
+                )
+            )
+        default:
+            return BlockInteractions()
+        }
     }
 }
 

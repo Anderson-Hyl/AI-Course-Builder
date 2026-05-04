@@ -356,6 +356,70 @@ public struct LearningRepository: Sendable {
         }
     }
 
+    // MARK: - Attempts
+
+    /// Records a learner attempt at a block. `inputJSON` always set;
+    /// `resultJSON` is set when the evaluator has a verdict (today: only
+    /// `multiple_choice`, evaluated heuristically against `correct_index`).
+    /// `scoredAt` mirrors `resultJSON` presence — a non-nil result is a
+    /// scored attempt, nil is pending.
+    @discardableResult
+    public func recordAttempt(
+        blockID: SessionBlock.ID,
+        kind: String,
+        inputJSON: String,
+        resultJSON: String? = nil
+    ) async throws -> Attempt.ID {
+        let id = UUID()
+        try await database.write { db in
+            try Attempt.insert {
+                Attempt.Draft(
+                    id: id,
+                    blockID: blockID,
+                    kind: kind,
+                    inputJSON: inputJSON,
+                    resultJSON: resultJSON,
+                    scoredAt: resultJSON != nil ? Date() : nil
+                )
+            }
+            .execute(db)
+        }
+        await observer.didRecordAttempt(id, blockID: blockID)
+        return id
+    }
+
+    /// Latest-by-`createdAt` attempt for a block, or nil if the learner
+    /// hasn't submitted yet. Session Workspace calls this on appear so
+    /// re-entering a session restores the prior selection + verdict
+    /// instead of looking pristine.
+    public func fetchLatestAttempt(forBlockID blockID: SessionBlock.ID) async throws -> Attempt? {
+        try await database.read { db in
+            try Attempt
+                .where { $0.blockID.eq(blockID) }
+                .order { $0.createdAt.desc() }
+                .fetchOne(db)
+        }
+    }
+
+    /// Latest attempt per block in a session, keyed by `SessionBlock.ID`.
+    /// Single round-trip: pulls every attempt for any block in the
+    /// session via `IN`-subquery, then collapses to latest-per-block in
+    /// memory. Cheap at session scale (≤~30 blocks × small attempt count).
+    public func fetchLatestAttempts(
+        forSessionID sessionID: Session.ID
+    ) async throws -> [SessionBlock.ID: Attempt] {
+        try await database.read { db in
+            let attempts = try Attempt
+                .where { $0.blockID.in(SessionBlock.where { $0.sessionID.eq(sessionID) }.select(\.id)) }
+                .order { $0.createdAt }
+                .fetchAll(db)
+            // `order(by: createdAt)` ascending + `uniquingKeysWith: latest`
+            // keeps the most recent attempt per block. If the same block
+            // has multiple attempts (resubmits), the trailing one wins.
+            return Dictionary(attempts.map { ($0.blockID, $0) }, uniquingKeysWith: { _, latest in latest })
+        }
+    }
+
     // MARK: - Demo seed
 
     /// Idempotent: returns the existing program for `goalID` if one
