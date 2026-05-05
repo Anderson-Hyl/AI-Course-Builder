@@ -1,6 +1,7 @@
 import LearningModels
 import LearningUI
 import SwiftUI
+import Textual
 
 struct ReviewCardBlockView: View {
     let payload: BlockPayload.ReviewCard
@@ -13,13 +14,13 @@ struct ReviewCardBlockView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(theme.text.tertiary)
                 .tracking(1.2)
-            Text(payload.front)
+            InlineText(markdown: payload.front, syntaxExtensions: [.math])
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(theme.text.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             if isFlipped {
-                Text(payload.back)
+                InlineText(markdown: payload.back, syntaxExtensions: [.math])
                     .font(.body)
                     .foregroundStyle(theme.text.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -2,8 +2,10 @@ import Dependencies
 import DependenciesMacros
 import Foundation
 
-/// Per-provider API-key storage. Backed by `UserDefaults.standard` keyed
-/// under `com.aicoursebuilder.provider-keys.<provider>`.
+/// Per-provider settings storage (API keys + optional override base
+/// URLs). Backed by `UserDefaults.standard`:
+/// - keys     → `com.aicoursebuilder.provider-keys.<provider>`
+/// - base URL → `com.aicoursebuilder.provider-baseurls.<provider>`
 ///
 /// **Why UserDefaults, not Keychain (yet)?** Per CLAUDE.md, ad-hoc-signed
 /// dev builds have volatile code identities that orphan Keychain items
@@ -15,6 +17,8 @@ public struct APIKeyStore: Sendable {
     public var get: @Sendable (_ provider: ProviderID) throws -> String?
     public var set: @Sendable (_ provider: ProviderID, _ key: String) throws -> Void
     public var remove: @Sendable (_ provider: ProviderID) throws -> Void
+    public var getBaseURL: @Sendable (_ provider: ProviderID) throws -> String?
+    public var setBaseURL: @Sendable (_ provider: ProviderID, _ value: String) throws -> Void
 }
 
 extension APIKeyStore: DependencyKey {
@@ -36,6 +40,21 @@ extension APIKeyStore: DependencyKey {
             },
             remove: { provider in
                 UserDefaults.standard.removeObject(forKey: userDefaultsKey(for: provider))
+            },
+            getBaseURL: { provider in
+                let storageKey = baseURLDefaultsKey(for: provider)
+                let value = UserDefaults.standard.string(forKey: storageKey)
+                return (value?.isEmpty == false) ? value : nil
+            },
+            setBaseURL: { provider, raw in
+                let storageKey = baseURLDefaultsKey(for: provider)
+                var trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                while trimmed.hasSuffix("/") { trimmed.removeLast() }
+                if trimmed.isEmpty {
+                    UserDefaults.standard.removeObject(forKey: storageKey)
+                } else {
+                    UserDefaults.standard.set(trimmed, forKey: storageKey)
+                }
             }
         )
     }
@@ -45,6 +64,10 @@ extension APIKeyStore: DependencyKey {
 
 private func userDefaultsKey(for provider: ProviderID) -> String {
     "com.aicoursebuilder.provider-keys.\(provider.rawValue)"
+}
+
+private func baseURLDefaultsKey(for provider: ProviderID) -> String {
+    "com.aicoursebuilder.provider-baseurls.\(provider.rawValue)"
 }
 
 extension DependencyValues {

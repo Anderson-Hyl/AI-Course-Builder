@@ -10,11 +10,18 @@ public struct APIKeySheetFeature {
     @ObservableState
     public struct State: Equatable {
         public var keyDraft: String
+        public var baseURLDraft: String
         public var isSaving: Bool
         public var errorMessage: String?
 
-        public init(keyDraft: String = "", isSaving: Bool = false, errorMessage: String? = nil) {
+        public init(
+            keyDraft: String = "",
+            baseURLDraft: String = "",
+            isSaving: Bool = false,
+            errorMessage: String? = nil
+        ) {
             self.keyDraft = keyDraft
+            self.baseURLDraft = baseURLDraft
             self.isSaving = isSaving
             self.errorMessage = errorMessage
         }
@@ -23,7 +30,7 @@ public struct APIKeySheetFeature {
     public enum Action: BindableAction {
         case binding(BindingAction<State>)
         case onAppear
-        case loadedExistingKey(String?)
+        case loadedExistingSettings(key: String?, baseURL: String?)
         case saveTapped
         case cancelTapped
         case saveCompleted
@@ -50,23 +57,29 @@ public struct APIKeySheetFeature {
 
             case .onAppear:
                 return .run { [apiKeyStore] send in
-                    let existing = (try? apiKeyStore.get(provider: .anthropic)) ?? nil
-                    await send(.loadedExistingKey(existing))
+                    let existingKey = (try? apiKeyStore.get(provider: .anthropic)) ?? nil
+                    let existingBaseURL = (try? apiKeyStore.getBaseURL(provider: .anthropic)) ?? nil
+                    await send(.loadedExistingSettings(key: existingKey, baseURL: existingBaseURL))
                 }
 
-            case .loadedExistingKey(let value):
-                if state.keyDraft.isEmpty, let value, !value.isEmpty {
-                    state.keyDraft = value
+            case let .loadedExistingSettings(key, baseURL):
+                if state.keyDraft.isEmpty, let key, !key.isEmpty {
+                    state.keyDraft = key
+                }
+                if state.baseURLDraft.isEmpty, let baseURL, !baseURL.isEmpty {
+                    state.baseURLDraft = baseURL
                 }
                 return .none
 
             case .saveTapped:
                 state.isSaving = true
                 state.errorMessage = nil
-                let raw = state.keyDraft
+                let rawKey = state.keyDraft
+                let rawBaseURL = state.baseURLDraft
                 return .run { [apiKeyStore] send in
                     do {
-                        try apiKeyStore.set(.anthropic, raw)
+                        try apiKeyStore.set(.anthropic, rawKey)
+                        try apiKeyStore.setBaseURL(.anthropic, rawBaseURL)
                         await send(.saveCompleted)
                     } catch {
                         await send(.saveFailed(error.localizedDescription))

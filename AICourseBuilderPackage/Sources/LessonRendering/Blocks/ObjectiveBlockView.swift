@@ -1,6 +1,7 @@
 import LearningModels
 import LearningUI
 import SwiftUI
+import Textual
 
 struct ObjectiveBlockView: View {
     let payload: BlockPayload.Objective
@@ -12,7 +13,7 @@ struct ObjectiveBlockView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(theme.text.tertiary)
                 .tracking(1.2)
-            Text(payload.statement)
+            InlineText(markdown: payload.statement, syntaxExtensions: [.math])
                 .font(.title3)
                 .foregroundStyle(theme.text.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)

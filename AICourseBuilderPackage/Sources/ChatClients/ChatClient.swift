@@ -32,12 +32,14 @@ extension ChatClient: DependencyKey {
                                 continuation.finish(throwing: ChatClientError.missingAPIKey(model.provider))
                                 return
                             }
+                            let baseURL = (try? keyStore.getBaseURL(provider: model.provider)) ?? nil
                             switch model.provider {
                             case .anthropic:
                                 await AnthropicChatClient.stream(
                                     messages: messages,
                                     model: model,
                                     apiKey: apiKey,
+                                    baseURL: baseURL,
                                     tools: tools,
                                     toolChoice: toolChoice,
                                     continuation: continuation

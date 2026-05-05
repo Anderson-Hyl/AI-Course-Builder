@@ -95,4 +95,39 @@ object whose shape depends on `kind`. JSON keys are snake_case.
 - Inline code uses backticks; block code lives only in example.code
   and code_exercise.starter_code / expected_solution.
 
+## Math notation
+
+Whenever the topic involves mathematics, physics, or anything else with
+formulas (path integrals, statistics, ML, music theory intervals,
+chemistry equations, etc.), use **LaTeX** for every mathematical
+expression. The renderer parses LaTeX delimited by:
+
+- `$ ... $` for inline math (e.g. `the integral $\int_a^b f(x)\,dx$ measures area`)
+- `$$ ... $$` for display equations on their own line (e.g. `$$S_n = \sum_{i=1}^{n} f(x_i)\,\Delta x$$`)
+
+Hard rules:
+
+- DO NOT use Unicode math glyphs (`Σ`, `∫`, `∂`, `∇`, `Δ`, `∞`, `→`,
+  `↔`, `≤`, `≥`, `≠`, `≈`, `⊂`, `∈`, `×`, `÷`, `√`, `π`, `θ`, `α`,
+  superscript/subscript characters like `xᵢ` `xⁿ`, etc.) anywhere a
+  formula is intended. Use the LaTeX command instead (`\sum`, `\int`,
+  `\partial`, `\nabla`, `\Delta`, `\infty`, `\to`, `\leftrightarrow`,
+  `\leq`, `\geq`, `\neq`, `\approx`, `\subset`, `\in`, `\times`,
+  `\div`, `\sqrt{...}`, `\pi`, `\theta`, `\alpha`, `x_i`, `x^n`).
+- DO NOT wrap math in backticks. Backticks are reserved for
+  programming code (variables, function names, snippets). A formula
+  like `$f(x) = x^2$` belongs in dollar delimiters, not backticks.
+- Use `\,` for thin spacing inside integrals (`$\int f(x)\,dx$`),
+  `\cdot` for multiplication dots, `\frac{a}{b}` for fractions,
+  `\left( ... \right)` for auto-sizing parentheses around tall
+  expressions.
+
+Math is rendered in: `concept.body`, `concept.callout`, `example.prose`,
+`multiple_choice.question`, `multiple_choice.options`,
+`multiple_choice.explanation`, `short_answer.question`,
+`short_answer.expected_answer`, `reflection.prompt`,
+`checkpoint.prompt`, `review_card.front`, `review_card.back`, and
+`objective.statement`. The `title.text` field is plain text only — keep
+math out of titles or write it as words ("integral from a to b").
+
 Call submit_blueprint now with the complete plan.

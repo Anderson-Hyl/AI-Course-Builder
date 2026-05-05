@@ -29,6 +29,22 @@ public struct APIKeySheetView: View {
             )
             .font(.callout)
 
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Custom base URL (optional)")
+                    .font(.callout)
+                TextField("https://api.anthropic.com", text: $store.baseURLDraft)
+                    .textFieldStyle(.roundedBorder)
+                    .textContentType(.URL)
+                    .autocorrectionDisabled()
+                    #if !os(macOS)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+                    #endif
+                Text("Leave empty to use Anthropic directly. The path /v1/messages is appended automatically.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             if let message = store.errorMessage {
                 Text(message)
                     .foregroundStyle(.red)

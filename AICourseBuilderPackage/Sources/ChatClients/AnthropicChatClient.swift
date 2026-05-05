@@ -17,6 +17,7 @@ enum AnthropicChatClient {
         messages: [ChatMessage],
         model: LanguageModel,
         apiKey: String,
+        baseURL: String?,
         tools: [ToolSpec],
         toolChoice: ToolChoice,
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
@@ -26,6 +27,7 @@ enum AnthropicChatClient {
                 messages: messages,
                 model: model,
                 apiKey: apiKey,
+                baseURL: baseURL,
                 tools: tools,
                 toolChoice: toolChoice,
                 continuation: continuation
@@ -39,23 +41,42 @@ enum AnthropicChatClient {
         }
     }
 
-    private static let endpoint = URL(string: "https://api.anthropic.com/v1/messages")!
+    private static let defaultEndpoint = URL(string: "https://api.anthropic.com/v1/messages")!
     private static let apiVersion = "2023-06-01"
+
+    private static func endpointURL(baseURL: String?) throws -> URL {
+        let trimmed = baseURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let trimmed, !trimmed.isEmpty else { return defaultEndpoint }
+        var stripped = trimmed
+        while stripped.hasSuffix("/") { stripped.removeLast() }
+        guard let parsed = URL(string: stripped + "/v1/messages") else {
+            throw ChatClientError.networkError("Invalid base URL: \(trimmed)")
+        }
+        return parsed
+    }
 
     private static func runTurn(
         messages: [ChatMessage],
         model: LanguageModel,
         apiKey: String,
+        baseURL: String?,
         tools: [ToolSpec],
         toolChoice: ToolChoice,
         continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
     ) async throws {
-        var request = URLRequest(url: endpoint)
+        var request = URLRequest(url: try endpointURL(baseURL: baseURL))
         request.httpMethod = "POST"
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue(apiVersion, forHTTPHeaderField: "anthropic-version")
         request.setValue("application/json", forHTTPHeaderField: "content-type")
         request.setValue("application/json", forHTTPHeaderField: "accept")
+        // 300s instead of URLSession's 60s default: a full structured-output
+        // blueprint streams over 30-90s direct to Anthropic, and proxies that
+        // buffer the upstream response can push that to 2-3min before the
+        // first SSE byte arrives. The timer resets on each received chunk,
+        // so this caps time-to-first-byte and prolonged silent gaps, not
+        // total streaming duration.
+        request.timeoutInterval = 300
         request.httpBody = try buildRequestBody(
             messages: messages,
             model: model,
@@ -82,6 +103,17 @@ enum AnthropicChatClient {
             throw ChatClientError.httpError(status: http.statusCode, body: body)
         }
 
+        // Many third-party Anthropic-compatible proxies ignore stream:true
+        // and return one complete Message JSON instead of SSE. Detect via
+        // Content-Type and parse the body as a non-streaming Message.
+        let contentType = (http.value(forHTTPHeaderField: "content-type") ?? "").lowercased()
+        if !contentType.contains("event-stream") {
+            let body = try await collectAllBytes(bytes)
+            let summary = try parseNonStreamingMessage(body: body, continuation: continuation)
+            continuation.yield(.done(summary))
+            return
+        }
+
         var blocks: [Int: BlockState] = [:]
         var inputTokens: Int?
         var outputTokens: Int?
@@ -89,8 +121,11 @@ enum AnthropicChatClient {
 
         for try await line in bytes.lines {
             if line.isEmpty || line.hasPrefix(":") { continue }
-            guard line.hasPrefix("data: ") else { continue }
-            let payload = String(line.dropFirst("data: ".count))
+            // SSE spec allows `data:` with or without a leading space after
+            // the colon; be lenient since some proxies omit it.
+            guard line.hasPrefix("data:") else { continue }
+            let dataPart = line.dropFirst("data:".count)
+            let payload = dataPart.first == " " ? String(dataPart.dropFirst()) : String(dataPart)
             guard let data = payload.data(using: .utf8) else { continue }
             guard let event = try? JSONDecoder().decode(AnthropicStreamEvent.self, from: data) else {
                 // Drop unrecognized event shapes (ping, future event types).
@@ -177,6 +212,77 @@ enum AnthropicChatClient {
         return nil
     }
 
+    private static func collectAllBytes(_ bytes: URLSession.AsyncBytes) async throws -> Data {
+        var collected = Data()
+        for try await byte in bytes {
+            collected.append(byte)
+            // 4 MB ceiling — a structured blueprint JSON is well under 100 KB.
+            // Bigger means the proxy is sending something pathological.
+            if collected.count > 4_000_000 {
+                throw ChatClientError.parseError("Non-streaming response exceeded 4MB")
+            }
+        }
+        return collected
+    }
+
+    private static func parseNonStreamingMessage(
+        body: Data,
+        continuation: AsyncThrowingStream<ChatEvent, Error>.Continuation
+    ) throws -> TurnSummary {
+        let parsed: Any
+        do {
+            parsed = try JSONSerialization.jsonObject(with: body)
+        } catch {
+            let preview = String(data: body.prefix(512), encoding: .utf8) ?? "(non-UTF8)"
+            throw ChatClientError.parseError(
+                "Couldn't parse non-streaming response as JSON: \(error.localizedDescription). Body preview: \(preview)"
+            )
+        }
+        guard let root = parsed as? [String: Any] else {
+            throw ChatClientError.parseError("Non-streaming response was not a JSON object")
+        }
+        if let errorObj = root["error"] as? [String: Any] {
+            let message = (errorObj["message"] as? String) ?? "(no message)"
+            throw ChatClientError.networkError("API error: \(message)")
+        }
+
+        let usage = root["usage"] as? [String: Any]
+        let inputTokens = usage?["input_tokens"] as? Int
+        let outputTokens = usage?["output_tokens"] as? Int
+        let stopReason = root["stop_reason"] as? String
+
+        var concatenatedText = ""
+        var capturedToolCall: CapturedToolCall?
+        let contentBlocks = (root["content"] as? [[String: Any]]) ?? []
+        for block in contentBlocks {
+            switch block["type"] as? String {
+            case "text":
+                if let text = block["text"] as? String {
+                    concatenatedText += text
+                }
+            case "tool_use":
+                guard capturedToolCall == nil,
+                      let id = block["id"] as? String,
+                      let name = block["name"] as? String,
+                      let input = block["input"]
+                else { continue }
+                let inputData = try JSONSerialization.data(withJSONObject: input, options: [])
+                capturedToolCall = CapturedToolCall(id: id, name: name, inputJSON: inputData)
+            default:
+                continue
+            }
+        }
+        if !concatenatedText.isEmpty {
+            continuation.yield(.text(concatenatedText))
+        }
+        return TurnSummary(
+            inputTokens: inputTokens,
+            outputTokens: outputTokens,
+            stopReason: stopReason,
+            capturedToolCall: capturedToolCall
+        )
+    }
+
     private static func readAllBytes(_ bytes: URLSession.AsyncBytes) async throws -> String? {
         var collected = Data()
         for try await byte in bytes {
@@ -200,7 +306,7 @@ enum AnthropicChatClient {
 
         var body: [String: Any] = [
             "model": model.id,
-            "max_tokens": 8192,
+            "max_tokens": 16384,
             "stream": true,
             "messages": nonSystem.map { message -> [String: Any] in
                 [

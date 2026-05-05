@@ -67,7 +67,7 @@ struct PlanningEngineTests {
                 stream: { _, _, _, _ in
                     AsyncThrowingStream { continuation in
                         continuation.yield(.text("I refuse to call the tool."))
-                        continuation.yield(.done(TurnSummary()))
+                        continuation.yield(.done(TurnSummary(stopReason: "end_turn")))
                         continuation.finish()
                     }
                 },
@@ -79,7 +79,7 @@ struct PlanningEngineTests {
             let profile = try await repo.ensureCurrentProfile()
             let goalID = try await repo.createGoal(profileID: profile.id, text: "Learn Haskell")
 
-            await #expect(throws: PlanningEngineError.modelDidNotCallTool) {
+            await #expect(throws: PlanningEngineError.modelDidNotCallTool(stopReason: "end_turn")) {
                 _ = try await PlanningEngine.liveValue.generateBlueprint(goalID, profile.id, false)
             }
         }
@@ -161,6 +161,7 @@ struct PlanningEngineTests {
 
     private func makeAPIKeyStore(initial: String?) -> APIKeyStore {
         let storage = LockIsolated<String?>(initial)
+        let baseURL = LockIsolated<String?>(nil)
         return APIKeyStore(
             get: { _ in storage.value },
             set: { _, value in
@@ -168,6 +169,10 @@ struct PlanningEngineTests {
             },
             remove: { _ in
                 storage.withValue { $0 = nil }
+            },
+            getBaseURL: { _ in baseURL.value },
+            setBaseURL: { _, value in
+                baseURL.withValue { $0 = value.isEmpty ? nil : value }
             }
         )
     }

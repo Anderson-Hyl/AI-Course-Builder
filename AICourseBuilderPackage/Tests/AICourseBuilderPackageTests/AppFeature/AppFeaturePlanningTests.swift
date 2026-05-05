@@ -119,7 +119,7 @@ struct AppFeaturePlanningTests {
             $0.defaultDatabase = database
             $0.planningEngine = PlanningEngine(
                 generateBlueprint: { _, _, _ in
-                    throw PlanningEngineError.modelDidNotCallTool
+                    throw PlanningEngineError.modelDidNotCallTool(stopReason: "end_turn")
                 }
             )
         }
@@ -129,7 +129,7 @@ struct AppFeaturePlanningTests {
         await store.receive(\.planningFailed)
 
         #expect(store.state.currentGoal?.id == context.goalID)
-        #expect(store.state.planningError == .modelDidNotCallTool)
+        #expect(store.state.planningError == .modelDidNotCallTool(stopReason: "end_turn"))
     }
 
     // MARK: - Seed

@@ -55,6 +55,7 @@ extension PlanningEngine: DependencyKey {
                 )
 
                 var captured: CapturedToolCall?
+                var lastStopReason: String?
                 do {
                     for try await event in chatClient.stream(
                         messages,
@@ -67,6 +68,7 @@ extension PlanningEngine: DependencyKey {
                             continue
                         case .done(let summary):
                             captured = summary.capturedToolCall
+                            lastStopReason = summary.stopReason
                         }
                     }
                 } catch is CancellationError {
@@ -81,7 +83,7 @@ extension PlanningEngine: DependencyKey {
                 }
 
                 guard let toolCall = captured else {
-                    throw PlanningEngineError.modelDidNotCallTool
+                    throw PlanningEngineError.modelDidNotCallTool(stopReason: lastStopReason)
                 }
 
                 let proposal: BlueprintProposal
