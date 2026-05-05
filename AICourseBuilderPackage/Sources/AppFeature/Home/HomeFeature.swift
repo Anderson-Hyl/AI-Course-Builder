@@ -15,6 +15,7 @@ import LearningRepository
 public struct HomeFeature {
     @ObservableState
     public struct State: Equatable {
+        public var profile: LearnerProfile?
         public var goal: LearningGoal?
         public var program: ProgramBlueprint?
         public var stage: Stage?
@@ -23,6 +24,19 @@ public struct HomeFeature {
         public var loadFailure: String?
 
         public init() {}
+
+        /// The session the dashboard surfaces in "Today's Session" and
+        /// resumes via the headline button. First session that isn't yet
+        /// `completed`, falling through to the last session when all are
+        /// done so the resume affordance never disappears.
+        public var todaysSession: Session? {
+            sessions.first(where: { $0.status != Session.Status.completed }) ?? sessions.last
+        }
+
+        /// Number of sessions in `sessions` that have status `completed`.
+        public var completedSessionsCount: Int {
+            sessions.filter { $0.status == Session.Status.completed }.count
+        }
     }
 
     public enum Action {

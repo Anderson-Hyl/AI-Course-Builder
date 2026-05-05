@@ -111,6 +111,7 @@ public struct AppFeature {
                 state.isBootstrapping = false
                 state.profile = profile
                 state.currentGoal = goal
+                state.home.profile = profile
                 state.home.goal = goal
                 // Seed the form with profile defaults so re-opening Goal
                 // Intake (after a Reset) starts from where the user left off.

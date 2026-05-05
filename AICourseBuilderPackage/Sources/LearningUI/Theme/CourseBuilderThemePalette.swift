@@ -248,6 +248,10 @@ public struct CourseBuilderThemePalette: Sendable {
     public var border: Border
     public var overlay: Overlay
     public var decorative: Decorative
+    public var typography: CourseBuilderTypography
+    public var spacing: CourseBuilderSpacing
+    public var radius: CourseBuilderRadius
+    public var shadow: CourseBuilderShadow
 
     public init(
         surface: Surface,
@@ -256,7 +260,11 @@ public struct CourseBuilderThemePalette: Sendable {
         state: State,
         border: Border,
         overlay: Overlay,
-        decorative: Decorative
+        decorative: Decorative,
+        typography: CourseBuilderTypography,
+        spacing: CourseBuilderSpacing,
+        radius: CourseBuilderRadius,
+        shadow: CourseBuilderShadow
     ) {
         self.surface = surface
         self.text = text
@@ -265,6 +273,10 @@ public struct CourseBuilderThemePalette: Sendable {
         self.border = border
         self.overlay = overlay
         self.decorative = decorative
+        self.typography = typography
+        self.spacing = spacing
+        self.radius = radius
+        self.shadow = shadow
     }
 }
 
@@ -342,6 +354,26 @@ public extension CourseBuilderThemePalette {
             heroGlowLavender: .cb(light: 0xECE4FA, dark: 0x332B58, alpha: 0.42),
             cardShadow: .cb(light: 0x102A4A, dark: 0x000000, alpha: 0.08),
             floatingShadow: .cb(light: 0x102A4A, dark: 0x000000, alpha: 0.14)
+        ),
+        typography: .mvp,
+        spacing: .mvp,
+        radius: .mvp,
+        shadow: .init(
+            card: .init(
+                color: .cb(light: 0x102A4A, dark: 0x000000, alpha: 0.08),
+                radius: 30,
+                y: 12
+            ),
+            float: .init(
+                color: .cb(light: 0x102A4A, dark: 0x000000, alpha: 0.14),
+                radius: 40,
+                y: 16
+            ),
+            accentPrimary: .init(
+                color: .cb(light: 0x295FD3, dark: 0x74A0FF, alpha: 0.22),
+                radius: 18,
+                y: 10
+            )
         )
     )
 }
