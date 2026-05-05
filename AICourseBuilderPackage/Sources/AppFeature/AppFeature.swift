@@ -1,7 +1,9 @@
+import ChatClients
 import ComposableArchitecture
 import Foundation
 import LearningModels
 import LearningRepository
+import PlanningEngine
 
 /// Top-level coordinator. Owns the bootstrap path (ensure a `LearnerProfile`
 /// exists, fetch any active `LearningGoal`, install or recover the demo
@@ -23,6 +25,17 @@ public struct AppFeature {
         public var goalIntake: GoalIntakeFeature.State = .init()
         public var home: HomeFeature.State = .init()
         @Presents public var destination: Destination.State?
+
+        /// True while `PlanningEngine.generateBlueprint` is in flight.
+        /// `AppView` swaps the root surface to `PlanningProgressView`
+        /// for as long as this is set.
+        public var isPlanning: Bool = false
+        /// Last planning failure. `AppView` shows `PlanningErrorView`
+        /// when non-nil; `.missingAPIKey` auto-opens the key sheet.
+        public var planningError: PlanningEngineError?
+        /// API-key entry sheet, presented from Goal Intake's gear icon
+        /// or auto-presented after `.missingAPIKey`.
+        @Presents public var apiKeySheet: APIKeySheetFeature.State?
 
         public init() {}
     }
@@ -54,11 +67,24 @@ public struct AppFeature {
         /// a Home reload when the change targets the active program.
         case sessionsChanged(programID: UUID)
         case resetTapped
+
+        // MARK: - Planning
+        case planningStarted
+        case planningCompleted(ProgramBlueprint)
+        case planningFailed(PlanningEngineError)
+        case retryPlanningTapped
+        case useDemoFallbackTapped
+        case dismissPlanningError
+
+        // MARK: - API key sheet
+        case openAPIKeySheet
+        case apiKeySheet(PresentationAction<APIKeySheetFeature.Action>)
     }
 
     public init() {}
 
     @Dependency(\.learningRepository) var repository
+    @Dependency(\.planningEngine) var planningEngine
 
     public var body: some ReducerOf<Self> {
         Scope(state: \.goalIntake, action: \.goalIntake) {
@@ -119,6 +145,9 @@ public struct AppFeature {
                     // Observer dispatches `.goalCreated`.
                 }
 
+            case .goalIntake(.delegate(.openAPIKeySheet)):
+                return .send(.openAPIKeySheet)
+
             case .goalIntake:
                 return .none
 
@@ -132,22 +161,105 @@ public struct AppFeature {
                 }
 
             case .loadProgramForGoal(let goalID):
-                return .run { [repository] send in
+                guard let profileID = state.profile?.id else { return .none }
+                state.isPlanning = true
+                state.planningError = nil
+                return .run { [planningEngine, repository] send in
                     do {
-                        // Idempotent — returns existing program if one
-                        // already exists for the goal, otherwise builds
-                        // the demo blueprint. Either way fetch the row
-                        // afterwards so Home has the up-to-date summary.
-                        _ = try await repository.installDemoProgram(goalID: goalID)
-                        if let program = try await repository.fetchProgram(forGoalID: goalID) {
-                            await send(.programLoaded(program))
-                        } else {
-                            await send(.programLoadFailed("Program not found after install"))
+                        // Idempotent: returns existing program if one is
+                        // already on disk for this goal, otherwise drives
+                        // the LLM call + persists via the repository.
+                        let programID = try await planningEngine.generateBlueprint(
+                            goalID, profileID, false
+                        )
+                        guard
+                            let program = try await repository.fetchProgram(forGoalID: goalID),
+                            program.id == programID
+                        else {
+                            await send(.planningFailed(.translationFailed(
+                                underlying: LearningRepositoryError.programNotFound(programID)
+                            )))
+                            return
                         }
+                        await send(.planningCompleted(program))
+                    } catch let error as PlanningEngineError {
+                        await send(.planningFailed(error))
+                    } catch is CancellationError {
+                        await send(.planningFailed(.cancelled))
                     } catch {
-                        await send(.programLoadFailed(error.localizedDescription))
+                        await send(.planningFailed(.network(error.localizedDescription)))
                     }
                 }
+
+            case .planningStarted:
+                state.isPlanning = true
+                state.planningError = nil
+                return .none
+
+            case .planningCompleted(let program):
+                state.isPlanning = false
+                state.planningError = nil
+                state.currentProgram = program
+                state.home.goal = state.currentGoal
+                state.home.program = program
+                return .send(.home(.onAppear(programID: program.id)))
+
+            case .planningFailed(let error):
+                state.isPlanning = false
+                state.planningError = error
+                if case .missingAPIKey = error, state.apiKeySheet == nil {
+                    state.apiKeySheet = APIKeySheetFeature.State()
+                }
+                return .none
+
+            case .retryPlanningTapped:
+                guard let goalID = state.currentGoal?.id else { return .none }
+                state.planningError = nil
+                return .send(.loadProgramForGoal(goalID))
+
+            case .useDemoFallbackTapped:
+                guard let goalID = state.currentGoal?.id else { return .none }
+                state.planningError = nil
+                state.isPlanning = true
+                return .run { [repository] send in
+                    do {
+                        _ = try await repository.installDemoProgram(goalID: goalID)
+                        if let program = try await repository.fetchProgram(forGoalID: goalID) {
+                            await send(.planningCompleted(program))
+                        } else {
+                            await send(.planningFailed(.translationFailed(
+                                underlying: LearningRepositoryError.profileBootstrapFailed
+                            )))
+                        }
+                    } catch {
+                        await send(.planningFailed(.network(error.localizedDescription)))
+                    }
+                }
+
+            case .dismissPlanningError:
+                state.planningError = nil
+                return .none
+
+            case .openAPIKeySheet:
+                state.apiKeySheet = APIKeySheetFeature.State()
+                return .none
+
+            case .apiKeySheet(.presented(.delegate(.saved))):
+                state.apiKeySheet = nil
+                // If the prior failure was missing-key, retry automatically
+                // so the user doesn't have to tap Try Again themselves.
+                if case .missingAPIKey = state.planningError, let goalID = state.currentGoal?.id {
+                    state.planningError = nil
+                    return .send(.loadProgramForGoal(goalID))
+                }
+                return .none
+
+            case .apiKeySheet(.presented(.delegate(.cancelled))):
+                state.apiKeySheet = nil
+                return .none
+
+            case .apiKeySheet:
+                return .none
 
             case .programLoaded(let program):
                 state.currentProgram = program
@@ -209,25 +321,11 @@ public struct AppFeature {
             }
         }
         .ifLet(\.$destination, action: \.destination)
+        .ifLet(\.$apiKeySheet, action: \.apiKeySheet) {
+            APIKeySheetFeature()
+        }
     }
 
-}
-
-// MARK: - Repository dependency
-
-extension DependencyValues {
-    /// `LearningRepository` injected through Dependencies so reducers
-    /// reach it without parameter threading and tests can swap in
-    /// fixtures via `withDependencies`.
-    public var learningRepository: LearningRepository {
-        get { self[LearningRepositoryKey.self] }
-        set { self[LearningRepositoryKey.self] = newValue }
-    }
-}
-
-private enum LearningRepositoryKey: DependencyKey {
-    static let liveValue = LearningRepository()
-    static let testValue = LearningRepository()
 }
 
 extension AppFeature.Destination.State: Equatable {}

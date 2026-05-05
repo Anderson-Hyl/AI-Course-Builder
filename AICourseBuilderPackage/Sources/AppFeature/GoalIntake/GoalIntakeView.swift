@@ -33,17 +33,30 @@ public struct GoalIntakeView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Let's build your")
-                .font(.system(size: 36, weight: .bold))
-                .foregroundStyle(.primary)
-            Text("personalized course")
-                .font(.system(size: 36, weight: .bold))
-                .foregroundStyle(.primary)
-            Text("Tell us what you want to learn and we'll generate a focused plan with practice and feedback.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .padding(.top, 4)
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Let's build your")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundStyle(.primary)
+                Text("personalized course")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundStyle(.primary)
+                Text("Tell us what you want to learn and we'll generate a focused plan with practice and feedback.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 4)
+            }
+            Spacer()
+            Button {
+                store.send(.gearTapped)
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.plain)
+            .help("Configure API key")
         }
     }
 

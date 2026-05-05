@@ -19,6 +19,15 @@ public struct AppView: View {
         Group {
             if store.isBootstrapping {
                 bootstrapView
+            } else if store.isPlanning {
+                PlanningProgressView()
+            } else if let error = store.planningError {
+                PlanningErrorView(
+                    error: error,
+                    onRetry: { store.send(.retryPlanningTapped) },
+                    onUseDemo: { store.send(.useDemoFallbackTapped) },
+                    onOpenSettings: { store.send(.openAPIKeySheet) }
+                )
             } else if store.currentGoal != nil {
                 NavigationStack {
                     HomeView(
@@ -40,6 +49,9 @@ public struct AppView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .sheet(item: $store.scope(state: \.apiKeySheet, action: \.apiKeySheet)) { sheetStore in
+            APIKeySheetView(store: sheetStore)
+        }
         .task {
             store.send(.onAppear)
         }

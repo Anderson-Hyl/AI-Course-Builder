@@ -77,6 +77,10 @@ let package = Package(
                 "LearningRepository",
                 "ChatClients",
                 .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies"),
+            ],
+            resources: [
+                .process("Resources"),
             ]
         ),
         .target(
@@ -121,6 +125,8 @@ let package = Package(
                 "LearningUI",
                 "LessonRendering",
                 "EvaluationEngine",
+                "PlanningEngine",
+                "ChatClients",
                 .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
                 .product(name: "SQLiteData", package: "sqlite-data"),
             ]
@@ -129,11 +135,13 @@ let package = Package(
             name: "AICourseBuilderPackageTests",
             dependencies: [
                 "AppFeature",
+                "ChatClients",
                 "EvaluationEngine",
                 "LearningDatabase",
                 "LearningModels",
                 "LearningRepository",
                 "LessonRendering",
+                "PlanningEngine",
                 .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
                 .product(name: "SQLiteData", package: "sqlite-data"),
             ]

@@ -33,6 +33,8 @@ public struct GoalIntakeFeature {
         case learningStyleToggled(String)
         case previewTapped
         case startLearningTapped
+        /// Header gear icon — opens the API key sheet via the parent.
+        case gearTapped
         case delegate(Delegate)
 
         @CasePathable
@@ -40,6 +42,8 @@ public struct GoalIntakeFeature {
             /// Form passed validation and the user committed. Parent
             /// `AppFeature` handles persistence + transition.
             case submitTapped
+            /// User tapped the gear icon — parent presents the API key sheet.
+            case openAPIKeySheet
         }
     }
 
@@ -70,6 +74,9 @@ public struct GoalIntakeFeature {
             case .startLearningTapped:
                 guard state.canSubmit else { return .none }
                 return .send(.delegate(.submitTapped))
+
+            case .gearTapped:
+                return .send(.delegate(.openAPIKeySheet))
 
             case .delegate:
                 return .none
