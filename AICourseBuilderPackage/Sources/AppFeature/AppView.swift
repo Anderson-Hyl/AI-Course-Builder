@@ -4,10 +4,10 @@ import LearningUI
 import SwiftUI
 
 /// Root view. Switches between bootstrap progress, Goal Intake, and the
-/// Home Dashboard. The Home Dashboard pushes Session Workspace when the
-/// learner taps a session card; future Program Map / Review Vault
-/// destinations plug into the same `Destination` reducer enum on
-/// `AppFeature`.
+/// SidebarShell-wrapped main app (Home / Program Map). The shell owns
+/// the sidebar so the active route can swap content without unmounting
+/// the navigation chrome. SessionWorkspace pushes via NavigationStack
+/// on top of whichever route is current.
 public struct AppView: View {
     @Bindable var store: StoreOf<AppFeature>
 
@@ -30,9 +30,14 @@ public struct AppView: View {
                 )
             } else if store.currentGoal != nil {
                 NavigationStack {
-                    HomeView(
-                        store: store.scope(state: \.home, action: \.home)
-                    )
+                    SidebarShell(
+                        activeRoute: store.currentRoute,
+                        userName: store.profile?.displayName ?? "Learner",
+                        userRole: "learner",
+                        onSelectRoute: { store.send(.routeSelected($0)) }
+                    ) {
+                        routedContent
+                    }
                     .navigationDestination(
                         item: $store.scope(
                             state: \.destination?.sessionWorkspace,
@@ -56,6 +61,21 @@ public struct AppView: View {
             store.send(.onAppear)
         }
         .theme(.mvp)
+    }
+
+    @ViewBuilder
+    private var routedContent: some View {
+        switch store.currentRoute {
+        case .home:
+            HomeView(store: store.scope(state: \.home, action: \.home))
+        case .programMap:
+            ProgramMapView(store: store.scope(state: \.programMap, action: \.programMap))
+        default:
+            // Sessions / AI Tutor / Review / Notes don't have screens
+            // yet. Their pills are inert in the sidebar so the user
+            // can't actually land here, but fall back to Home anyway.
+            HomeView(store: store.scope(state: \.home, action: \.home))
+        }
     }
 
     private var bootstrapView: some View {

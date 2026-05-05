@@ -309,6 +309,15 @@ public struct LearningRepository: Sendable {
         }
     }
 
+    public func fetchSessions(forSprintID sprintID: Sprint.ID) async throws -> [Session] {
+        try await database.read { db in
+            try Session
+                .where { $0.sprintID.eq(sprintID) }
+                .order { $0.order }
+                .fetchAll(db)
+        }
+    }
+
     // MARK: - Session blocks
 
     /// Inserts blocks in `order`-ascending order so the first row's

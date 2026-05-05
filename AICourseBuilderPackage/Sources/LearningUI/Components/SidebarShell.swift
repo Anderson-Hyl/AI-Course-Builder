@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// The six routes the persistent sidebar advertises. Only `.home`
-/// resolves to a real screen this pass; the rest render as inactive
-/// pills so the nav has the right visual weight while the screens
-/// behind them are still placeholder stubs (Program Map, Sessions
-/// list, AI Tutor, Review Vault, Notes).
-public enum SidebarRoute: Sendable, CaseIterable {
+/// The six routes the persistent sidebar advertises. `.home` and
+/// `.programMap` resolve to real screens; the other four render as
+/// inactive pills so the nav has the right visual weight while their
+/// screens are still placeholder stubs (Sessions list, AI Tutor,
+/// Review Vault, Notes).
+public enum SidebarRoute: Sendable, CaseIterable, Equatable {
     case home
     case programMap
     case sessions
@@ -34,16 +34,30 @@ public enum SidebarRoute: Sendable, CaseIterable {
         case .notes: "✎"
         }
     }
+
+    /// `true` for routes that have a real screen wired up. The shell
+    /// forwards taps for these via `onSelectRoute`; the rest stay inert.
+    public var hasScreen: Bool {
+        switch self {
+        case .home, .programMap: true
+        default: false
+        }
+    }
 }
 
 /// Wraps a screen with the design board's persistent left sidebar
 /// (132pt brand + nav + user card column). The content area paints
 /// against `surface.page`; the page sits inside the warmer
 /// `surface.appCanvas` so the sidebar reads as a separate plane.
+///
+/// Pass `onSelectRoute` to make the wired routes (`.hasScreen == true`)
+/// tappable; the closure fires for any wired route the user picks.
+/// Inactive / unwired routes stay inert regardless.
 public struct SidebarShell<Content: View>: View {
     let activeRoute: SidebarRoute
     let userName: String
     let userRole: String
+    let onSelectRoute: ((SidebarRoute) -> Void)?
     let content: Content
 
     @Environment(\.theme) private var theme
@@ -52,11 +66,13 @@ public struct SidebarShell<Content: View>: View {
         activeRoute: SidebarRoute,
         userName: String,
         userRole: String,
+        onSelectRoute: ((SidebarRoute) -> Void)? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.activeRoute = activeRoute
         self.userName = userName
         self.userRole = userRole
+        self.onSelectRoute = onSelectRoute
         self.content = content()
     }
 
@@ -81,7 +97,8 @@ public struct SidebarShell<Content: View>: View {
                     NavPill(
                         glyph: route.glyph,
                         label: route.label,
-                        isActive: route == activeRoute
+                        isActive: route == activeRoute,
+                        onTap: tapHandler(for: route)
                     )
                 }
             }
@@ -102,6 +119,13 @@ public struct SidebarShell<Content: View>: View {
             )
             .ignoresSafeArea()
         )
+    }
+
+    private func tapHandler(for route: SidebarRoute) -> (() -> Void)? {
+        guard let onSelectRoute, route.hasScreen, route != activeRoute else {
+            return nil
+        }
+        return { onSelectRoute(route) }
     }
 
     private var brand: some View {

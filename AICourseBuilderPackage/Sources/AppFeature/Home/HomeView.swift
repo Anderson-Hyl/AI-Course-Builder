@@ -3,9 +3,11 @@ import LearningModels
 import LearningUI
 import SwiftUI
 
-/// Home Dashboard. Sidebar shell + headline + 3-column metrics row +
+/// Home Dashboard content area — headline + 3-column metrics row +
 /// `Today's Session` × `Progress` grid + three bottom cards. Layout
-/// follows `design/mvp-design-board.html` artboard 2.
+/// follows `design/mvp-design-board.html` artboard 2. The sidebar is
+/// owned by `AppView`'s root `SidebarShell` so route switching across
+/// Home / Program Map keeps it stable.
 public struct HomeView: View {
     @Bindable var store: StoreOf<HomeFeature>
 
@@ -14,18 +16,11 @@ public struct HomeView: View {
     }
 
     public var body: some View {
-        SidebarShell(
-            activeRoute: .home,
-            userName: store.profile?.displayName ?? "Learner",
-            userRole: "learner"
-        ) {
-            ScrollView {
-                content
-                    .padding(theme.spacing.xxl)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-            }
+        ScrollView {
+            content
+                .padding(theme.spacing.xxl)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-        .navigationBarBackButtonHidden(true)
     }
 
     @Environment(\.theme) private var theme

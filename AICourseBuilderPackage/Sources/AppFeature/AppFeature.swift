@@ -3,6 +3,7 @@ import ComposableArchitecture
 import Foundation
 import LearningModels
 import LearningRepository
+import LearningUI
 import PlanningEngine
 
 /// Top-level coordinator. Owns the bootstrap path (ensure a `LearnerProfile`
@@ -24,6 +25,11 @@ public struct AppFeature {
         public var currentProgram: ProgramBlueprint?
         public var goalIntake: GoalIntakeFeature.State = .init()
         public var home: HomeFeature.State = .init()
+        public var programMap: ProgramMapFeature.State = .init()
+        /// Which sidebar destination is currently active. Switches
+        /// between Home and Program Map; other routes are inert until
+        /// their screens land.
+        public var currentRoute: SidebarRoute = .home
         @Presents public var destination: Destination.State?
 
         /// True while `PlanningEngine.generateBlueprint` is in flight.
@@ -46,6 +52,11 @@ public struct AppFeature {
         case bootstrapFailed(String)
         case goalIntake(GoalIntakeFeature.Action)
         case home(HomeFeature.Action)
+        case programMap(ProgramMapFeature.Action)
+        /// Sidebar nav fired — swap the visible content area to the
+        /// chosen route. Only `.home` and `.programMap` are handled;
+        /// other routes are inert until their screens land.
+        case routeSelected(SidebarRoute)
         case destination(PresentationAction<Destination.Action>)
         /// Fired by the app-level observer after `createGoal` commits.
         case goalCreated(LearningGoal.ID)
@@ -93,6 +104,9 @@ public struct AppFeature {
         Scope(state: \.home, action: \.home) {
             HomeFeature()
         }
+        Scope(state: \.programMap, action: \.programMap) {
+            ProgramMapFeature()
+        }
         Reduce { state, action in
             switch action {
             case .onAppear:
@@ -113,6 +127,8 @@ public struct AppFeature {
                 state.currentGoal = goal
                 state.home.profile = profile
                 state.home.goal = goal
+                state.programMap.profile = profile
+                state.programMap.goal = goal
                 // Seed the form with profile defaults so re-opening Goal
                 // Intake (after a Reset) starts from where the user left off.
                 state.goalIntake.startingLevel = profile.startingLevel
@@ -203,7 +219,12 @@ public struct AppFeature {
                 state.currentProgram = program
                 state.home.goal = state.currentGoal
                 state.home.program = program
-                return .send(.home(.onAppear(programID: program.id)))
+                state.programMap.goal = state.currentGoal
+                state.programMap.program = program
+                return .merge(
+                    .send(.home(.onAppear(programID: program.id))),
+                    .send(.programMap(.onAppear(programID: program.id)))
+                )
 
             case .planningFailed(let error):
                 state.isPlanning = false
@@ -266,7 +287,12 @@ public struct AppFeature {
                 state.currentProgram = program
                 state.home.goal = state.currentGoal
                 state.home.program = program
-                return .send(.home(.onAppear(programID: program.id)))
+                state.programMap.goal = state.currentGoal
+                state.programMap.program = program
+                return .merge(
+                    .send(.home(.onAppear(programID: program.id))),
+                    .send(.programMap(.onAppear(programID: program.id)))
+                )
 
             case .programLoadFailed(let message):
                 state.home.loadFailure = message
@@ -280,7 +306,10 @@ public struct AppFeature {
 
             case .sessionsChanged(let programID):
                 guard state.currentProgram?.id == programID else { return .none }
-                return .send(.home(.onAppear(programID: programID)))
+                return .merge(
+                    .send(.home(.onAppear(programID: programID))),
+                    .send(.programMap(.onAppear(programID: programID)))
+                )
 
             case .home(.delegate(.sessionTapped(let id))):
                 state.destination = .sessionWorkspace(SessionWorkspaceFeature.State(sessionID: id))
@@ -290,6 +319,19 @@ public struct AppFeature {
                 return .send(.resetTapped)
 
             case .home:
+                return .none
+
+            case .programMap(.delegate(.sessionTapped(let id))):
+                state.destination = .sessionWorkspace(SessionWorkspaceFeature.State(sessionID: id))
+                return .none
+
+            case .programMap:
+                return .none
+
+            case .routeSelected(let route):
+                guard route.hasScreen, route != state.currentRoute else { return .none }
+                state.currentRoute = route
+                state.destination = nil
                 return .none
 
             case .destination(.presented(.sessionWorkspace(.delegate(.dismiss)))):
@@ -310,6 +352,8 @@ public struct AppFeature {
                 state.currentGoal = nil
                 state.currentProgram = nil
                 state.home = HomeFeature.State()
+                state.programMap = ProgramMapFeature.State()
+                state.currentRoute = .home
                 state.destination = nil
                 state.goalIntake = GoalIntakeFeature.State()
                 if let profile = state.profile {
