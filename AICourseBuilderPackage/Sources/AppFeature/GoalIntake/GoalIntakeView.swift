@@ -1,12 +1,13 @@
 import ComposableArchitecture
 import LearningModels
+import LearningUI
 import SwiftUI
 
-/// Goal Intake screen — matches the structural intent of `concept.png`
-/// panel 1. Visual polish (UIComponents tokens, hero illustration,
-/// gradient background) lands with the design-system pass. This pass
-/// uses plain SwiftUI + system colors so the form is functional and
-/// the persistence path is testable end-to-end.
+/// Goal Intake screen — matches `design/mvp-design-board.html` artboard
+/// 1. Two-column layout: a form (goal text, level, time budget, "we'll
+/// generate" check grid, action row) on the left and a decorative hero
+/// illustration (orbs + layered panels) on the right. Collapses to a
+/// single column on narrow widths via `ViewThatFits`.
 public struct GoalIntakeView: View {
     @Bindable var store: StoreOf<GoalIntakeFeature>
 
@@ -14,186 +15,231 @@ public struct GoalIntakeView: View {
         self.store = store
     }
 
+    @Environment(\.theme) private var theme
+
     public var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 32) {
+            VStack(alignment: .leading, spacing: theme.spacing.xxl) {
                 header
-                topicSection
-                startingLevelSection
-                timeBudgetSection
-                learningStyleSection
-                outcomeSection
-                actionRow
+                bodyLayout
             }
-            .padding(40)
-            .frame(maxWidth: 720, alignment: .leading)
+            .padding(.horizontal, theme.spacing.xxl)
+            .padding(.vertical, theme.spacing.xxxl)
+            .frame(maxWidth: 1180, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
-        .background(Color(.windowBackgroundFallback))
+        .background(theme.surface.appCanvas.ignoresSafeArea())
     }
 
+    // MARK: - Header
+
     private var header: some View {
-        HStack(alignment: .top, spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Let's build your")
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundStyle(.primary)
-                Text("personalized course")
-                    .font(.system(size: 36, weight: .bold))
-                    .foregroundStyle(.primary)
-                Text("Tell us what you want to learn and we'll generate a focused plan with practice and feedback.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 4)
-            }
+        HStack(alignment: .center, spacing: theme.spacing.lg) {
+            BrandMark()
             Spacer()
+            Chip("Step 1 of 4")
             Button {
                 store.send(.gearTapped)
             } label: {
                 Image(systemName: "gearshape")
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(theme.text.secondary)
                     .frame(width: 36, height: 36)
+                    .background(theme.surface.card, in: Circle())
+                    .overlay(Circle().stroke(theme.border.regular, lineWidth: 1))
             }
             .buttonStyle(.plain)
             .help("Configure API key")
         }
     }
 
-    private var topicSection: some View {
-        section(title: "What do you want to learn?") {
-            TextField(
-                "e.g. I want to learn Haskell",
-                text: $store.goalText,
-                axis: .vertical
-            )
-            .textFieldStyle(.plain)
-            .lineLimit(2...4)
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(.inputBackgroundFallback))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-            )
-            .font(.system(size: 17))
+    // MARK: - Body layout
+
+    @ViewBuilder
+    private var bodyLayout: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: theme.spacing.xxxl) {
+                form
+                    .frame(maxWidth: 540, alignment: .topLeading)
+                heroIllustration
+                    .frame(maxWidth: .infinity, minHeight: 540)
+            }
+            VStack(alignment: .leading, spacing: theme.spacing.xxl) {
+                form
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                heroIllustration
+                    .frame(maxWidth: .infinity, minHeight: 360)
+            }
         }
+    }
+
+    // MARK: - Form
+
+    private var form: some View {
+        VStack(alignment: .leading, spacing: theme.spacing.xl) {
+            VStack(alignment: .leading, spacing: theme.spacing.md) {
+                Text("Let's build your personalized course")
+                    .font(theme.typography.heroHeading)
+                    .foregroundStyle(theme.text.primary)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.7)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Tell us your goal and we'll turn it into a structured learning path with focused sessions, practice, checkpoints, and review.")
+                    .font(theme.typography.body)
+                    .foregroundStyle(theme.text.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            goalInputBlock
+            startingLevelSection
+            timeBudgetSection
+            generateSection
+            actionRow
+        }
+    }
+
+    private var goalInputBlock: some View {
+        VStack(alignment: .leading, spacing: theme.spacing.xs) {
+            sectionLabel("Learning Goal")
+            HStack(spacing: theme.spacing.md) {
+                BadgeCircle("λ", tone: .accent)
+                TextField(
+                    "I want to learn …",
+                    text: $store.goalText,
+                    axis: .vertical
+                )
+                .textFieldStyle(.plain)
+                .lineLimit(1...3)
+                .font(.system(size: 15))
+                .foregroundStyle(theme.text.primary)
+            }
+            .padding(.horizontal, theme.spacing.xl)
+            .padding(.vertical, theme.spacing.lg)
+            .background(theme.surface.card, in: RoundedRectangle(cornerRadius: theme.radius.input))
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.radius.input)
+                    .stroke(theme.border.accent, lineWidth: 1.5)
+            )
+        }
+        .padding(theme.spacing.xl)
+        .background(
+            LinearGradient(
+                colors: [theme.surface.input, theme.surface.cardMuted],
+                startPoint: .top,
+                endPoint: .bottom
+            ),
+            in: RoundedRectangle(cornerRadius: theme.radius.card)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: theme.radius.card)
+                .stroke(theme.border.regular, lineWidth: 1)
+        )
     }
 
     private var startingLevelSection: some View {
-        section(title: "Where are you starting from?") {
-            Picker("Starting level", selection: $store.startingLevel) {
+        VStack(alignment: .leading, spacing: theme.spacing.sm) {
+            sectionLabel("Starting Level")
+            HStack(alignment: .top, spacing: theme.spacing.md) {
                 ForEach(LearnerProfile.StartingLevel.all, id: \.self) { level in
-                    Text(displayName(forLevel: level)).tag(level)
-                }
-            }
-            .pickerStyle(.segmented)
-        }
-    }
-
-    private var timeBudgetSection: some View {
-        section(title: "Time budget") {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("\(store.weeklyTimeBudgetHours) hours per week")
-                        .font(.system(size: 17, weight: .medium))
-                    Spacer()
-                    Text(timeBudgetLabel(forHours: store.weeklyTimeBudgetHours))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Slider(
-                    value: Binding(
-                        get: { Double(store.weeklyTimeBudgetHours) },
-                        set: { store.weeklyTimeBudgetHours = Int($0.rounded()) }
-                    ),
-                    in: 1...20,
-                    step: 1
-                )
-            }
-        }
-    }
-
-    private var learningStyleSection: some View {
-        section(title: "How do you like to learn?") {
-            FlowLayout(spacing: 10) {
-                ForEach(LearnerProfile.LearningStyle.all, id: \.self) { style in
-                    LearningStyleChip(
-                        label: displayName(forStyle: style),
-                        isSelected: store.learningStyles.contains(style)
+                    OptionCard(
+                        title: levelTitle(level),
+                        subtitle: levelSubtitle(level),
+                        isSelected: store.startingLevel == level
                     ) {
-                        store.send(.learningStyleToggled(style))
+                        store.startingLevel = level
                     }
                 }
             }
         }
     }
 
-    private var outcomeSection: some View {
-        section(title: "Outcome (optional)") {
-            TextField(
-                "e.g. ship a small Haskell tool I can show off",
-                text: $store.targetOutcome
-            )
-            .textFieldStyle(.plain)
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(.inputBackgroundFallback))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-            )
+    private var timeBudgetSection: some View {
+        VStack(alignment: .leading, spacing: theme.spacing.sm) {
+            sectionLabel("Time Budget")
+            HStack(alignment: .top, spacing: theme.spacing.md) {
+                ForEach(TimeBudgetBucket.allCases, id: \.self) { bucket in
+                    OptionCard(
+                        title: bucket.title,
+                        subtitle: bucket.subtitle,
+                        isSelected: TimeBudgetBucket(weeklyHours: store.weeklyTimeBudgetHours) == bucket
+                    ) {
+                        store.weeklyTimeBudgetHours = bucket.weeklyHours
+                    }
+                }
+            }
+        }
+    }
+
+    private var generateSection: some View {
+        VStack(alignment: .leading, spacing: theme.spacing.sm) {
+            sectionLabel("We'll Generate")
+            VStack(alignment: .leading, spacing: theme.spacing.sm) {
+                HStack(spacing: theme.spacing.regular) {
+                    CheckRow("Structured learning path")
+                    CheckRow("AI tutor hints and feedback")
+                }
+                HStack(spacing: theme.spacing.regular) {
+                    CheckRow("Hands-on practice and projects")
+                    CheckRow("Review scheduling and milestones")
+                }
+            }
         }
     }
 
     private var actionRow: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: theme.spacing.md) {
             Button {
                 store.send(.previewTapped)
             } label: {
                 Text("Preview Plan")
-                    .font(.system(size: 16, weight: .medium))
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
+                    .font(theme.typography.buttonLabel)
+                    .foregroundStyle(theme.text.primary)
+                    .padding(.horizontal, theme.spacing.xl)
+                    .padding(.vertical, theme.spacing.md)
+                    .background(theme.surface.card, in: RoundedRectangle(cornerRadius: theme.radius.pill))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: theme.radius.pill)
+                            .stroke(theme.border.regular, lineWidth: 1)
+                    )
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.plain)
             .disabled(!store.canSubmit)
+            .opacity(store.canSubmit ? 1 : 0.55)
 
             Button {
                 store.send(.startLearningTapped)
             } label: {
                 Text("Start Learning")
-                    .font(.system(size: 16, weight: .semibold))
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
+                    .font(theme.typography.buttonLabel)
+                    .foregroundStyle(theme.text.inverse)
+                    .padding(.horizontal, theme.spacing.xl)
+                    .padding(.vertical, theme.spacing.md)
+                    .background(
+                        LinearGradient(
+                            colors: [theme.accent.primary, theme.accent.pressed],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        in: RoundedRectangle(cornerRadius: theme.radius.pill)
+                    )
+                    .shadow(theme.shadow.accentPrimary)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
             .disabled(!store.canSubmit)
+            .opacity(store.canSubmit ? 1 : 0.55)
         }
-        .padding(.top, 12)
+        .padding(.top, theme.spacing.xs)
     }
 
-    private func section<Content: View>(
-        title: String,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.6)
-            content()
-        }
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(theme.typography.label)
+            .textCase(.uppercase)
+            .tracking(1.2)
+            .foregroundStyle(theme.text.tertiary)
     }
 
-    private func displayName(forLevel level: String) -> String {
+    private func levelTitle(_ level: String) -> String {
         switch level {
         case LearnerProfile.StartingLevel.beginner: "Beginner"
         case LearnerProfile.StartingLevel.intermediate: "Intermediate"
@@ -202,141 +248,215 @@ public struct GoalIntakeView: View {
         }
     }
 
-    private func displayName(forStyle style: String) -> String {
-        switch style {
-        case LearnerProfile.LearningStyle.handsOn: "Hands-on"
-        case LearnerProfile.LearningStyle.conceptual: "Conceptual"
-        case LearnerProfile.LearningStyle.visual: "Visual"
-        case LearnerProfile.LearningStyle.reading: "Reading"
-        default: style.replacingOccurrences(of: "_", with: " ").capitalized
+    private func levelSubtitle(_ level: String) -> String {
+        switch level {
+        case LearnerProfile.StartingLevel.beginner: "New to the topic"
+        case LearnerProfile.StartingLevel.intermediate: "Some experience"
+        case LearnerProfile.StartingLevel.advanced: "Very comfortable"
+        default: ""
         }
     }
 
-    private func timeBudgetLabel(forHours hours: Int) -> String {
-        switch hours {
-        case ...3: "Casual"
-        case 4...7: "Steady"
-        case 8...12: "Focused"
-        default: "Intensive"
+    // MARK: - Hero illustration
+
+    private var heroIllustration: some View {
+        ZStack {
+            // Soft glows behind the panels
+            Circle()
+                .fill(theme.decorative.heroGlowWarm)
+                .frame(width: 360, height: 360)
+                .blur(radius: 50)
+                .offset(x: -100, y: -100)
+            Circle()
+                .fill(theme.decorative.heroGlowBlue)
+                .frame(width: 380, height: 380)
+                .blur(radius: 50)
+                .offset(x: 110, y: 100)
+
+            // Layered panels
+            heroMainPanel
+                .frame(maxWidth: 420, maxHeight: 180)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .padding(.bottom, theme.spacing.xxxl)
+                .padding(.horizontal, theme.spacing.xxl)
+
+            heroNotePanel
+                .frame(maxWidth: 240)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                .padding(.top, theme.spacing.xxl)
+                .padding(.trailing, theme.spacing.xxl)
+
+            heroMiniPanel
+                .frame(width: 170, height: 96)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(.top, theme.spacing.lg)
+                .padding(.leading, theme.spacing.xl)
+        }
+    }
+
+    private var heroMainPanel: some View {
+        HStack(spacing: theme.spacing.xl) {
+            Text("λ")
+                .font(.system(size: 64, weight: .bold))
+                .foregroundStyle(theme.text.inverse)
+            VStack(alignment: .leading, spacing: theme.spacing.md) {
+                lineCapsule(widthFraction: 0.42)
+                lineCapsule(widthFraction: 0.88)
+                lineCapsule(widthFraction: 0.74)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(theme.spacing.xxl)
+        .frame(maxWidth: .infinity)
+        .background(
+            LinearGradient(
+                colors: [
+                    theme.surface.sidebar,
+                    theme.surface.sidebar.opacity(0.92)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            ),
+            in: RoundedRectangle(cornerRadius: theme.radius.hero)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: theme.radius.hero)
+                .stroke(theme.border.regular, lineWidth: 1)
+        )
+        .shadow(theme.shadow.float)
+    }
+
+    private var heroNotePanel: some View {
+        VStack(alignment: .leading, spacing: theme.spacing.md) {
+            Text("Session Blueprint")
+                .font(theme.typography.label)
+                .textCase(.uppercase)
+                .tracking(1.2)
+                .foregroundStyle(theme.text.tertiary)
+            VStack(alignment: .leading, spacing: theme.spacing.sm) {
+                noteLine(widthFraction: 0.64)
+                noteLine(widthFraction: 0.82)
+                noteLine(widthFraction: 0.54)
+                noteLine(widthFraction: 0.76)
+            }
+        }
+        .padding(theme.spacing.xl)
+        .background(theme.surface.card.opacity(0.94), in: RoundedRectangle(cornerRadius: theme.radius.hero))
+        .overlay(
+            RoundedRectangle(cornerRadius: theme.radius.hero)
+                .stroke(theme.border.regular, lineWidth: 1)
+        )
+        .shadow(theme.shadow.float)
+    }
+
+    private var heroMiniPanel: some View {
+        RoundedRectangle(cornerRadius: theme.radius.hero)
+            .fill(
+                LinearGradient(
+                    colors: [theme.accent.warmSoft, theme.accent.warmSoft.opacity(0.6)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.radius.hero)
+                    .stroke(theme.border.regular, lineWidth: 1)
+            )
+            .shadow(theme.shadow.card)
+    }
+
+    private func lineCapsule(widthFraction: CGFloat) -> some View {
+        GeometryReader { proxy in
+            Capsule()
+                .fill(Color.white.opacity(0.18))
+                .frame(width: proxy.size.width * widthFraction, height: 11)
+        }
+        .frame(height: 11)
+    }
+
+    private func noteLine(widthFraction: CGFloat) -> some View {
+        GeometryReader { proxy in
+            Capsule()
+                .fill(theme.border.regular)
+                .frame(width: proxy.size.width * widthFraction, height: 9)
+        }
+        .frame(height: 9)
+    }
+}
+
+// MARK: - Time budget bucket
+
+/// The design board's three discrete buckets ("30 min/day", "1 hr/day",
+/// "2+ hrs/day"). Maps weekly hours to and from these labels so the
+/// underlying `weeklyTimeBudgetHours: Int` state stays compatible with
+/// `LearnerProfile` and the planning prompt.
+private enum TimeBudgetBucket: String, CaseIterable {
+    case lite
+    case balanced
+    case deep
+
+    init(weeklyHours: Int) {
+        switch weeklyHours {
+        case ...4: self = .lite
+        case 5...10: self = .balanced
+        default: self = .deep
+        }
+    }
+
+    var weeklyHours: Int {
+        switch self {
+        case .lite: 3
+        case .balanced: 7
+        case .deep: 14
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .lite: "30 min/day"
+        case .balanced: "1 hr/day"
+        case .deep: "2+ hrs/day"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .lite: "Fast and consistent"
+        case .balanced: "Balanced pace"
+        case .deep: "Deep immersion"
         }
     }
 }
 
-// MARK: - Chip
+// MARK: - Brand mark
 
-private struct LearningStyleChip: View {
-    let label: String
-    let isSelected: Bool
-    let action: () -> Void
+/// Compact brand row for screen headers — small accent-tinted badge
+/// and the product name. Used in the Goal Intake header today; can
+/// graduate to LearningUI once a second screen wants the same chrome.
+private struct BrandMark: View {
+    @Environment(\.theme) private var theme
 
     var body: some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 14, weight: .medium))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
+        HStack(spacing: theme.spacing.sm) {
+            Text("A")
+                .font(.system(size: 14, weight: .heavy))
+                .foregroundStyle(theme.accent.primary)
+                .frame(width: 26, height: 26)
                 .background(
-                    Capsule().fill(isSelected ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.05))
+                    LinearGradient(
+                        colors: [theme.accent.softFill.opacity(0.8), theme.accent.softFill],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    in: RoundedRectangle(cornerRadius: theme.radius.chip)
                 )
                 .overlay(
-                    Capsule().stroke(
-                        isSelected ? Color.accentColor : Color.primary.opacity(0.12),
-                        lineWidth: isSelected ? 1.5 : 1
-                    )
+                    RoundedRectangle(cornerRadius: theme.radius.chip)
+                        .stroke(theme.accent.primary.opacity(0.2), lineWidth: 1)
                 )
-                .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-// MARK: - FlowLayout
-
-/// Lightweight wrapping HStack — enough for chip rows. SwiftUI's
-/// `Layout` protocol does the row math; we don't need a full
-/// flow-with-alignment library for the bootstrap pass.
-private struct FlowLayout: Layout {
-    let spacing: CGFloat
-
-    init(spacing: CGFloat = 8) {
-        self.spacing = spacing
-    }
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
-        var rowWidth: CGFloat = 0
-        var rowHeight: CGFloat = 0
-        var totalHeight: CGFloat = 0
-        var maxRowWidth: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if rowWidth + size.width > maxWidth, rowWidth > 0 {
-                totalHeight += rowHeight + spacing
-                maxRowWidth = max(maxRowWidth, rowWidth - spacing)
-                rowWidth = 0
-                rowHeight = 0
-            }
-            rowWidth += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-        totalHeight += rowHeight
-        maxRowWidth = max(maxRowWidth, rowWidth - spacing)
-        return CGSize(width: max(0, maxRowWidth), height: totalHeight)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX
-        var y = bounds.minY
-        var rowHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > bounds.maxX, x > bounds.minX {
-                x = bounds.minX
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            subview.place(
-                at: CGPoint(x: x, y: y),
-                proposal: ProposedViewSize(size)
-            )
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
+            Text("AI Course Builder")
+                .font(.system(size: 18, weight: .heavy))
+                .foregroundStyle(theme.text.primary)
         }
     }
-}
-
-// MARK: - Cross-platform color shim
-
-/// Plain SwiftUI doesn't ship a single semantic color name that means
-/// "system app background" on both iOS and macOS — `Color(.windowBackground)`
-/// is iOS-only, `Color(NSColor.windowBackgroundColor)` is macOS-only. These
-/// extensions paper over the difference for the bootstrap pass; the
-/// design-system pass replaces both with `theme.colors.base` /
-/// `theme.colors.input`.
-extension ColorResource {}
-
-private extension Color {
-    init(_ resource: SystemColorResource) {
-        switch resource {
-        case .windowBackgroundFallback:
-            #if os(macOS)
-            self = Color(nsColor: .windowBackgroundColor)
-            #else
-            self = Color(uiColor: .systemGroupedBackground)
-            #endif
-        case .inputBackgroundFallback:
-            #if os(macOS)
-            self = Color(nsColor: .textBackgroundColor)
-            #else
-            self = Color(uiColor: .secondarySystemBackground)
-            #endif
-        }
-    }
-}
-
-private enum SystemColorResource {
-    case windowBackgroundFallback
-    case inputBackgroundFallback
 }
