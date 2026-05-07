@@ -39,9 +39,13 @@ public struct GoalIntakeFeature {
 
         @CasePathable
         public enum Delegate: Equatable {
-            /// Form passed validation and the user committed. Parent
-            /// `AppFeature` handles persistence + transition.
+            /// User tapped "Start Learning" — parent persists the goal
+            /// and routes through full blueprint generation.
             case submitTapped
+            /// User tapped "Preview Plan" — parent persists the goal
+            /// and routes through the fast outline call before the
+            /// Program Preview screen.
+            case previewSubmitted
             /// User tapped the gear icon — parent presents the API key sheet.
             case openAPIKeySheet
         }
@@ -65,11 +69,8 @@ public struct GoalIntakeFeature {
                 return .none
 
             case .previewTapped:
-                // Plan-preview is LLM-gated and ships with `PlanningEngine`
-                // in the next pass. No-op for now — the button stays
-                // visible so the affordance is in the muscle memory once
-                // the real path arrives.
-                return .none
+                guard state.canSubmit else { return .none }
+                return .send(.delegate(.previewSubmitted))
 
             case .startLearningTapped:
                 guard state.canSubmit else { return .none }

@@ -32,13 +32,28 @@ public struct AppFeature {
         public var currentRoute: SidebarRoute = .home
         @Presents public var destination: Destination.State?
 
-        /// True while `PlanningEngine.generateBlueprint` is in flight.
-        /// `AppView` swaps the root surface to `PlanningProgressView`
-        /// for as long as this is set.
+        /// True while a `PlanningEngine` call is in flight (outline OR
+        /// full). `AppView` swaps the root surface to
+        /// `PlanningProgressView` for as long as this is set; the
+        /// progress copy is driven by `pendingPlanningMode`.
         public var isPlanning: Bool = false
+        /// Tracks which planning call is/was in flight so retries and
+        /// progress copy land on the right mode. Reset between runs.
+        public var pendingPlanningMode: PlanningMode = .full
         /// Last planning failure. `AppView` shows `PlanningErrorView`
         /// when non-nil; `.missingAPIKey` auto-opens the key sheet.
         public var planningError: PlanningEngineError?
+        /// Set when the user taps "Preview Plan" so the bootstrap
+        /// completion handler routes to outline generation instead of
+        /// the full blueprint call. Cleared once routed.
+        public var pendingOutlineForNewGoal: Bool = false
+        /// Result of the most recent `generateOutline`. When non-nil,
+        /// `AppView` renders `ProgramPreviewView`. Cleared on confirm
+        /// (Start Learning) or refine (back to Goal Intake).
+        public var outlineProposal: OutlineProposal?
+        /// Goal text held across a "Refine Goal" reset so the user
+        /// doesn't have to retype after the goal row is deleted.
+        public var preservedGoalText: String?
         /// API-key entry sheet, presented from Goal Intake's gear icon
         /// or auto-presented after `.missingAPIKey`.
         @Presents public var apiKeySheet: APIKeySheetFeature.State?
@@ -65,6 +80,18 @@ public struct AppFeature {
         /// Internal: install (idempotent) + load the program for the
         /// current goal, then transition the user to Home Dashboard.
         case loadProgramForGoal(LearningGoal.ID)
+        /// Internal: kicks off the fast outline call. On success, routes
+        /// the user to `ProgramPreviewView`.
+        case loadOutlineForGoal(LearningGoal.ID)
+        /// Outline generation finished — store the proposal so the
+        /// preview surface renders.
+        case outlineCompleted(OutlineProposal)
+        /// User tapped "Start Learning" on the Preview screen — clear
+        /// outline state and trigger full blueprint generation.
+        case outlineConfirmed
+        /// User tapped "Refine Goal" on the Preview screen — preserve
+        /// the goal text and reset back to Goal Intake.
+        case outlineRefined
         /// Internal: program row finished loading — wire it into Home and
         /// kick off the home loader.
         case programLoaded(ProgramBlueprint)
@@ -136,6 +163,10 @@ public struct AppFeature {
                 state.goalIntake.learningStyles = profile.learningStyles
                 state.goalIntake.targetOutcome = profile.targetOutcome ?? ""
                 if let goal {
+                    if state.pendingOutlineForNewGoal {
+                        state.pendingOutlineForNewGoal = false
+                        return .send(.loadOutlineForGoal(goal.id))
+                    }
                     return .send(.loadProgramForGoal(goal.id))
                 }
                 return .none
@@ -146,6 +177,7 @@ public struct AppFeature {
 
             case .goalIntake(.delegate(.submitTapped)):
                 guard let profileID = state.profile?.id else { return .none }
+                state.pendingOutlineForNewGoal = false
                 let intake = state.goalIntake
                 return .run { [repository] _ in
                     try await repository.updateProfile(
@@ -160,6 +192,27 @@ public struct AppFeature {
                         text: intake.goalText
                     )
                     // Observer dispatches `.goalCreated`.
+                }
+
+            case .goalIntake(.delegate(.previewSubmitted)):
+                guard let profileID = state.profile?.id else { return .none }
+                state.pendingOutlineForNewGoal = true
+                let intake = state.goalIntake
+                return .run { [repository] _ in
+                    try await repository.updateProfile(
+                        id: profileID,
+                        startingLevel: intake.startingLevel,
+                        weeklyTimeBudgetHours: intake.weeklyTimeBudgetHours,
+                        learningStyles: intake.learningStyles,
+                        targetOutcome: intake.targetOutcome.isEmpty ? .some(nil) : .some(intake.targetOutcome)
+                    )
+                    _ = try await repository.createGoal(
+                        profileID: profileID,
+                        text: intake.goalText
+                    )
+                    // Observer dispatches `.goalCreated`; bootstrapCompleted
+                    // honors `pendingOutlineForNewGoal` and routes to
+                    // `loadOutlineForGoal` instead of `loadProgramForGoal`.
                 }
 
             case .goalIntake(.delegate(.openAPIKeySheet)):
@@ -180,6 +233,7 @@ public struct AppFeature {
             case .loadProgramForGoal(let goalID):
                 guard let profileID = state.profile?.id else { return .none }
                 state.isPlanning = true
+                state.pendingPlanningMode = .full
                 state.planningError = nil
                 return .run { [planningEngine, repository] send in
                     do {
@@ -207,6 +261,40 @@ public struct AppFeature {
                         await send(.planningFailed(.network(error.localizedDescription)))
                     }
                 }
+
+            case .loadOutlineForGoal(let goalID):
+                guard let profileID = state.profile?.id else { return .none }
+                state.isPlanning = true
+                state.pendingPlanningMode = .outline
+                state.planningError = nil
+                return .run { [planningEngine] send in
+                    do {
+                        let proposal = try await planningEngine.generateOutline(goalID, profileID)
+                        await send(.outlineCompleted(proposal))
+                    } catch let error as PlanningEngineError {
+                        await send(.planningFailed(error))
+                    } catch is CancellationError {
+                        await send(.planningFailed(.cancelled))
+                    } catch {
+                        await send(.planningFailed(.network(error.localizedDescription)))
+                    }
+                }
+
+            case .outlineCompleted(let proposal):
+                state.isPlanning = false
+                state.planningError = nil
+                state.outlineProposal = proposal
+                return .none
+
+            case .outlineConfirmed:
+                guard let goalID = state.currentGoal?.id else { return .none }
+                state.outlineProposal = nil
+                return .send(.loadProgramForGoal(goalID))
+
+            case .outlineRefined:
+                state.outlineProposal = nil
+                state.preservedGoalText = state.currentGoal?.text ?? state.goalIntake.goalText
+                return .send(.resetTapped)
 
             case .planningStarted:
                 state.isPlanning = true
@@ -237,7 +325,12 @@ public struct AppFeature {
             case .retryPlanningTapped:
                 guard let goalID = state.currentGoal?.id else { return .none }
                 state.planningError = nil
-                return .send(.loadProgramForGoal(goalID))
+                switch state.pendingPlanningMode {
+                case .outline:
+                    return .send(.loadOutlineForGoal(goalID))
+                case .full:
+                    return .send(.loadProgramForGoal(goalID))
+                }
 
             case .useDemoFallbackTapped:
                 guard let goalID = state.currentGoal?.id else { return .none }
@@ -272,7 +365,12 @@ public struct AppFeature {
                 // so the user doesn't have to tap Try Again themselves.
                 if case .missingAPIKey = state.planningError, let goalID = state.currentGoal?.id {
                     state.planningError = nil
-                    return .send(.loadProgramForGoal(goalID))
+                    switch state.pendingPlanningMode {
+                    case .outline:
+                        return .send(.loadOutlineForGoal(goalID))
+                    case .full:
+                        return .send(.loadProgramForGoal(goalID))
+                    }
                 }
                 return .none
 
@@ -351,6 +449,8 @@ public struct AppFeature {
             case .goalReset:
                 state.currentGoal = nil
                 state.currentProgram = nil
+                state.outlineProposal = nil
+                state.pendingOutlineForNewGoal = false
                 state.home = HomeFeature.State()
                 state.programMap = ProgramMapFeature.State()
                 state.currentRoute = .home
@@ -361,6 +461,10 @@ public struct AppFeature {
                     state.goalIntake.weeklyTimeBudgetHours = profile.weeklyTimeBudgetHours
                     state.goalIntake.learningStyles = profile.learningStyles
                     state.goalIntake.targetOutcome = profile.targetOutcome ?? ""
+                }
+                if let preserved = state.preservedGoalText {
+                    state.goalIntake.goalText = preserved
+                    state.preservedGoalText = nil
                 }
                 return .none
             }

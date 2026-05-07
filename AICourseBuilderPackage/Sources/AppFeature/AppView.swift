@@ -20,13 +20,19 @@ public struct AppView: View {
             if store.isBootstrapping {
                 bootstrapView
             } else if store.isPlanning {
-                PlanningProgressView()
+                PlanningProgressView(mode: store.pendingPlanningMode)
             } else if let error = store.planningError {
                 PlanningErrorView(
                     error: error,
                     onRetry: { store.send(.retryPlanningTapped) },
                     onUseDemo: { store.send(.useDemoFallbackTapped) },
                     onOpenSettings: { store.send(.openAPIKeySheet) }
+                )
+            } else if let outline = store.outlineProposal {
+                ProgramPreviewView(
+                    outline: outline,
+                    onStartLearning: { store.send(.outlineConfirmed) },
+                    onRefineGoal: { store.send(.outlineRefined) }
                 )
             } else if store.currentGoal != nil {
                 NavigationStack {

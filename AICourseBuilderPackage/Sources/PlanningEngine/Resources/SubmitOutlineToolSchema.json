@@ -1,0 +1,44 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["program", "stages"],
+  "properties": {
+    "program": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary"],
+      "properties": {
+        "summary": {
+          "type": "string",
+          "description": "One paragraph (2-4 sentences) framing the learner's program. Surfaced on the Program Preview hero card before the user commits to full generation."
+        },
+        "duration_weeks": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 52,
+          "description": "Estimated total program duration in weeks. Null if duration depends on outcomes rather than calendar time."
+        }
+      }
+    },
+    "normalized_topic": {
+      "type": ["string", "null"],
+      "description": "Lowercase canonical slug for the topic (e.g. 'haskell', 'organic_chemistry'). Used for retrieval; null if no clean slug fits."
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 8,
+      "description": "All stages of the program, in order. Each stage is one coarse phase the learner moves through. Sprints, sessions, and blocks are NOT generated at outline scope — those come on confirmation.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["order", "title", "intent"],
+        "properties": {
+          "order": { "type": "integer", "minimum": 1 },
+          "title": { "type": "string", "description": "Like 'Stage 1 · Expressions, Functions, Types'." },
+          "intent": { "type": "string", "description": "One sentence describing what this stage moves the learner toward." }
+        }
+      }
+    }
+  }
+}

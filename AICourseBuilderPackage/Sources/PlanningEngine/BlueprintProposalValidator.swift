@@ -7,6 +7,20 @@ import LearningModels
 /// engine can surface a retryable error rather than persisting a half-
 /// broken session.
 enum BlueprintProposalValidator {
+    static func validateOutline(_ proposal: OutlineProposal) throws {
+        guard (4...8).contains(proposal.stages.count) else {
+            throw PlanningEngineError.proposalValidationFailed(
+                reason: "Outline stage count \(proposal.stages.count) out of [4...8]."
+            )
+        }
+        let orders = proposal.stages.map(\.order)
+        guard Set(orders).count == orders.count else {
+            throw PlanningEngineError.proposalValidationFailed(
+                reason: "Outline stages have duplicate `order` values."
+            )
+        }
+    }
+
     static func validate(_ proposal: BlueprintProposal) throws {
         guard (4...8).contains(proposal.stages.count) else {
             throw PlanningEngineError.proposalValidationFailed(

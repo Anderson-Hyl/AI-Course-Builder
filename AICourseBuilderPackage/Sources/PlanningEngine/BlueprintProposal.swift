@@ -118,3 +118,29 @@ public struct BlueprintProposal: Codable, Equatable, Sendable {
         self.firstSessionBlocks = firstSessionBlocks
     }
 }
+
+/// Lightweight outline emitted by `submit_outline`. Holds just enough to
+/// render the Program Preview screen (program summary, duration estimate,
+/// the full ordered stage list with intent). Sprints, sessions, and blocks
+/// are filled in once the user confirms — keeps the preview fast and lets
+/// goal refinement re-run only this small call.
+public struct OutlineProposal: Codable, Equatable, Sendable {
+    public var program: BlueprintProposal.Program
+    public var normalizedTopic: String?
+    public var stages: [BlueprintProposal.Stage]
+
+    public enum CodingKeys: String, CodingKey {
+        case program, stages
+        case normalizedTopic = "normalized_topic"
+    }
+
+    public init(
+        program: BlueprintProposal.Program,
+        normalizedTopic: String? = nil,
+        stages: [BlueprintProposal.Stage]
+    ) {
+        self.program = program
+        self.normalizedTopic = normalizedTopic
+        self.stages = stages
+    }
+}
