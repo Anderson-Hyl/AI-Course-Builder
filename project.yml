@@ -16,6 +16,11 @@ settings:
 packages:
   AICourseBuilderPackage:
     path: AICourseBuilderPackage
+  # Hummingbird + swift-sdk-backed MCP server. macOS-dev target only —
+  # iPad shipping target intentionally excludes this so the App Store
+  # binary stays free of Hummingbird / NIO weight + the Process API.
+  AICourseBuilderMCP:
+    path: AICourseBuilderMCP
   swift-dependencies:
     url: https://github.com/pointfreeco/swift-dependencies
     from: 1.0.0
@@ -45,6 +50,11 @@ targets:
         product: LearningDatabase
       - package: AICourseBuilderPackage
         product: LearningRepository
+      # macOS-only: in-process MCP server for the Claude Code CLI
+      # provider. Started at app launch in AICourseBuilderApp.swift; the
+      # iPad target intentionally never sees it.
+      - package: AICourseBuilderMCP
+        product: AICourseBuilderMCPServer
       - package: swift-dependencies
         product: Dependencies
       - package: swift-composable-architecture
