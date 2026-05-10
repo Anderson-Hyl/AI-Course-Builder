@@ -4,9 +4,10 @@ import Foundation
 
 /// LLM provider abstraction. Engines call `chatClient.stream(...)` and
 /// iterate the returned `AsyncThrowingStream<ChatEvent, Error>`. Live
-/// value resolves the API key via `APIKeyStore` and dispatches by
-/// `model.provider`. Test value is the `@DependencyClient`-generated
-/// unimplemented stub; tests override per-call via `withDependencies`.
+/// value resolves the API key via `APIKeyStore` (when the provider needs
+/// one) and dispatches by `model.provider`. Test value is the
+/// `@DependencyClient`-generated unimplemented stub; tests override
+/// per-call via `withDependencies`.
 @DependencyClient
 public struct ChatClient: Sendable {
     public var stream: @Sendable (
@@ -27,14 +28,16 @@ extension ChatClient: DependencyKey {
                 AsyncThrowingStream { continuation in
                     let task = Task {
                         do {
-                            @Dependency(\.apiKeyStore) var keyStore
-                            guard let apiKey = try keyStore.get(provider: model.provider), !apiKey.isEmpty else {
-                                continuation.finish(throwing: ChatClientError.missingAPIKey(model.provider))
-                                return
-                            }
-                            let baseURL = (try? keyStore.getBaseURL(provider: model.provider)) ?? nil
                             switch model.provider {
                             case .anthropic:
+                                @Dependency(\.apiKeyStore) var keyStore
+                                guard let apiKey = try keyStore.get(provider: .anthropic),
+                                      !apiKey.isEmpty
+                                else {
+                                    continuation.finish(throwing: ChatClientError.missingAPIKey(.anthropic))
+                                    return
+                                }
+                                let baseURL = (try? keyStore.getBaseURL(provider: .anthropic)) ?? nil
                                 await AnthropicChatClient.stream(
                                     messages: messages,
                                     model: model,
@@ -45,6 +48,24 @@ extension ChatClient: DependencyKey {
                                     continuation: continuation
                                 )
                                 continuation.finish()
+
+                            case .claudeCode:
+                                #if os(macOS)
+                                await ClaudeCodeChatClient.stream(
+                                    messages: messages,
+                                    model: model,
+                                    tools: tools,
+                                    toolChoice: toolChoice,
+                                    continuation: continuation
+                                )
+                                continuation.finish()
+                                #else
+                                continuation.finish(
+                                    throwing: ChatClientError.networkError(
+                                        "Claude Code CLI provider is macOS-only."
+                                    )
+                                )
+                                #endif
                             }
                         } catch {
                             continuation.finish(throwing: error)
@@ -56,9 +77,18 @@ extension ChatClient: DependencyKey {
                 }
             },
             isAvailable: { provider in
-                @Dependency(\.apiKeyStore) var keyStore
-                let key = (try? keyStore.get(provider: provider)) ?? nil
-                return (key?.isEmpty == false)
+                switch provider {
+                case .anthropic:
+                    @Dependency(\.apiKeyStore) var keyStore
+                    let key = (try? keyStore.get(provider: .anthropic)) ?? nil
+                    return (key?.isEmpty == false)
+                case .claudeCode:
+                    #if os(macOS)
+                    return ClaudeCodeChatClient.detect() != nil
+                    #else
+                    return false
+                    #endif
+                }
             }
         )
     }

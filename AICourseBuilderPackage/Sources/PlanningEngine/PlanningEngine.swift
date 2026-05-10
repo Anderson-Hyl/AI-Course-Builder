@@ -44,9 +44,12 @@ extension PlanningEngine: DependencyKey {
                     return existing.id
                 }
 
-                let key = (try? apiKeyStore.get(provider: .anthropic)) ?? nil
-                guard let key, !key.isEmpty else {
-                    throw PlanningEngineError.missingAPIKey
+                let model = LanguageModel.defaultPlanningModel
+                if model.provider.requiresAPIKey {
+                    let key = (try? apiKeyStore.get(provider: model.provider)) ?? nil
+                    guard let key, !key.isEmpty else {
+                        throw PlanningEngineError.missingAPIKey
+                    }
                 }
 
                 let goals = try await repository.fetchAllGoals()
@@ -69,7 +72,7 @@ extension PlanningEngine: DependencyKey {
                 do {
                     for try await event in chatClient.stream(
                         messages,
-                        .claudeOpus47,
+                        model,
                         [toolSpec],
                         .tool(name: "submit_blueprint")
                     ) {
@@ -116,9 +119,12 @@ extension PlanningEngine: DependencyKey {
                 @Dependency(\.chatClient) var chatClient
                 @Dependency(\.apiKeyStore) var apiKeyStore
 
-                let key = (try? apiKeyStore.get(provider: .anthropic)) ?? nil
-                guard let key, !key.isEmpty else {
-                    throw PlanningEngineError.missingAPIKey
+                let model = LanguageModel.defaultPlanningModel
+                if model.provider.requiresAPIKey {
+                    let key = (try? apiKeyStore.get(provider: model.provider)) ?? nil
+                    guard let key, !key.isEmpty else {
+                        throw PlanningEngineError.missingAPIKey
+                    }
                 }
 
                 let goals = try await repository.fetchAllGoals()
@@ -141,7 +147,7 @@ extension PlanningEngine: DependencyKey {
                 do {
                     for try await event in chatClient.stream(
                         messages,
-                        .claudeOpus47,
+                        model,
                         [toolSpec],
                         .tool(name: "submit_outline")
                     ) {

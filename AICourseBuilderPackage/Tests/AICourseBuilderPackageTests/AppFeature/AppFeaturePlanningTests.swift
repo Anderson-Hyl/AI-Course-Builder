@@ -37,6 +37,10 @@ struct AppFeaturePlanningTests {
                 generateBlueprint: { goalID, _, _ in
                     let repo = LearningRepository()
                     return try await repo.installDemoProgram(goalID: goalID)
+                },
+                generateOutline: { _, _ in
+                    Issue.record("generateOutline should not be called in this test")
+                    throw PlanningEngineError.cancelled
                 }
             )
         }
@@ -69,6 +73,9 @@ struct AppFeaturePlanningTests {
             $0.defaultDatabase = database
             $0.planningEngine = PlanningEngine(
                 generateBlueprint: { _, _, _ in
+                    throw PlanningEngineError.missingAPIKey
+                },
+                generateOutline: { _, _ in
                     throw PlanningEngineError.missingAPIKey
                 }
             )
@@ -119,6 +126,9 @@ struct AppFeaturePlanningTests {
             $0.defaultDatabase = database
             $0.planningEngine = PlanningEngine(
                 generateBlueprint: { _, _, _ in
+                    throw PlanningEngineError.modelDidNotCallTool(stopReason: "end_turn")
+                },
+                generateOutline: { _, _ in
                     throw PlanningEngineError.modelDidNotCallTool(stopReason: "end_turn")
                 }
             )

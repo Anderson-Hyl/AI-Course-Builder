@@ -37,6 +37,12 @@ struct PlanningEngineTests {
         }
     }
 
+    // The missing-API-key pre-check only fires when the platform's default
+    // planning model is a provider that needs a key (`.anthropic`). On the
+    // macOS dev target the default is `.claudeCodeCli`, which authenticates
+    // out-of-band via the user's `claude login` session — there's no key
+    // to be missing, so this contract doesn't apply.
+    #if !os(macOS)
     @Test func generateBlueprintThrowsMissingAPIKeyWhenUnset() async throws {
         let database = try makeTestDatabase()
         try await withDependencies {
@@ -58,6 +64,7 @@ struct PlanningEngineTests {
             }
         }
     }
+    #endif
 
     @Test func generateBlueprintThrowsModelDidNotCallTool() async throws {
         let database = try makeTestDatabase()
