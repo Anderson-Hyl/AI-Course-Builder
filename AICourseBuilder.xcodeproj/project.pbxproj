@@ -12,20 +12,18 @@
 		2BF3E1AD35DEC68CAE39AB57 /* LearningRepository in Frameworks */ = {isa = PBXBuildFile; productRef = 2F727642AECC15BCC5DFAB7B /* LearningRepository */; };
 		3A317F1EC5764586BA9A4F6C /* LearningRepository in Frameworks */ = {isa = PBXBuildFile; productRef = C0BB924582143CD4B469E49A /* LearningRepository */; };
 		45C6A45B6E7DBAAEE36989B6 /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = B1A062BA8B1961F7BFA537A5 /* Dependencies */; };
-		8C4C5BAB28BEAFB761300863 /* AICourseBuilderMCPServer in Frameworks */ = {isa = PBXBuildFile; productRef = 258195C6A7233FD07BFF133F /* AICourseBuilderMCPServer */; };
-		9529A2C24D931A189314D850 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 5581785587C7815DBD8F1AA0 /* ComposableArchitecture */; };
+		8C4C5BAB28BEAFB761300863 /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = CD17A4B3421243F559AC5781 /* Dependencies */; };
 		B4BD4854344CD6EB2A5904E9 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = E537273B5A3DFD831AF3FB1D /* ComposableArchitecture */; };
 		C78000DC81CAABF5FB6B3407 /* AppFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 76329AEAEF4D00D4C9E0365F /* AppFeature */; };
 		C7D977AF02227B4C4D700B71 /* AICourseBuilderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72741242C4E258EAB831F87 /* AICourseBuilderApp.swift */; };
 		CF103315A905EE659A922910 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B743EC0CDB50DB2FF57D4FA0 /* Assets.xcassets */; };
 		D436DD5137A9F5D84EA8496C /* AICourseBuilderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B72741242C4E258EAB831F87 /* AICourseBuilderApp.swift */; };
-		EC429F087442F02BAB87CBE3 /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = CD17A4B3421243F559AC5781 /* Dependencies */; };
+		EC429F087442F02BAB87CBE3 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 5581785587C7815DBD8F1AA0 /* ComposableArchitecture */; };
 		F76F39A8332021E4F9FD970C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B743EC0CDB50DB2FF57D4FA0 /* Assets.xcassets */; };
 		FF4E77599D5026E6746686CF /* LearningDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = BD8D02A94B0F1708E0DE3BA5 /* LearningDatabase */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		3508948BD1A0E8A778EE1A9D /* AICourseBuilderMCP */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AICourseBuilderMCP; path = AICourseBuilderMCP; sourceTree = SOURCE_ROOT; };
 		3D8357FB3BC6C6CE1345CC29 /* AICourseBuilderPackage */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AICourseBuilderPackage; path = AICourseBuilderPackage; sourceTree = SOURCE_ROOT; };
 		5722B2C231F6380BF922DDD1 /* AICourseBuilder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AICourseBuilder.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B1CDAE4D4BE61F73409DC46E /* AICourseBuilder-iPad.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "AICourseBuilder-iPad.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -53,9 +51,8 @@
 				C78000DC81CAABF5FB6B3407 /* AppFeature in Frameworks */,
 				0E50151561DC7D51FA61DB44 /* LearningDatabase in Frameworks */,
 				2BF3E1AD35DEC68CAE39AB57 /* LearningRepository in Frameworks */,
-				8C4C5BAB28BEAFB761300863 /* AICourseBuilderMCPServer in Frameworks */,
-				EC429F087442F02BAB87CBE3 /* Dependencies in Frameworks */,
-				9529A2C24D931A189314D850 /* ComposableArchitecture in Frameworks */,
+				8C4C5BAB28BEAFB761300863 /* Dependencies in Frameworks */,
+				EC429F087442F02BAB87CBE3 /* ComposableArchitecture in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,7 +89,6 @@
 		E9AB1773FB9F9E483ECC596F /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				3508948BD1A0E8A778EE1A9D /* AICourseBuilderMCP */,
 				3D8357FB3BC6C6CE1345CC29 /* AICourseBuilderPackage */,
 			);
 			name = Packages;
@@ -142,7 +138,6 @@
 				76329AEAEF4D00D4C9E0365F /* AppFeature */,
 				B65498D4C5FF131852CD11F3 /* LearningDatabase */,
 				2F727642AECC15BCC5DFAB7B /* LearningRepository */,
-				258195C6A7233FD07BFF133F /* AICourseBuilderMCPServer */,
 				CD17A4B3421243F559AC5781 /* Dependencies */,
 				5581785587C7815DBD8F1AA0 /* ComposableArchitecture */,
 			);
@@ -181,7 +176,6 @@
 			packageReferences = (
 				2AEB0711BB3186D07AB23C27 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 				B16E518BFF00116023264081 /* XCRemoteSwiftPackageReference "swift-dependencies" */,
-				E4C334BDA2C329884D4201C4 /* XCLocalSwiftPackageReference "AICourseBuilderMCP" */,
 				3BABA104ED15A79F93C2BC84 /* XCLocalSwiftPackageReference "AICourseBuilderPackage" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -486,10 +480,6 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = AICourseBuilderPackage;
 		};
-		E4C334BDA2C329884D4201C4 /* XCLocalSwiftPackageReference "AICourseBuilderMCP" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = AICourseBuilderMCP;
-		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -512,10 +502,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		258195C6A7233FD07BFF133F /* AICourseBuilderMCPServer */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AICourseBuilderMCPServer;
-		};
 		2F727642AECC15BCC5DFAB7B /* LearningRepository */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = LearningRepository;

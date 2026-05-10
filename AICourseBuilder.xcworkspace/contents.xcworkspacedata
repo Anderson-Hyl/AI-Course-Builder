@@ -7,7 +7,4 @@
    <FileRef
       location = "group:AICourseBuilderPackage">
    </FileRef>
-   <FileRef
-      location = "group:AICourseBuilderMCP">
-   </FileRef>
 </Workspace>
