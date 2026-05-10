@@ -144,6 +144,19 @@ This pass uses plain SwiftUI + system colors so the bootstrap stays small. The n
 - **Engines never write to `database` directly** — always through `LearningRepository` so the mutation observer fires uniformly.
 - **Test fixtures use stable UUIDs** with readable suffixes (e.g. `…0001` = first goal, `…AAAA` = primary profile) so test failures point at the seeded row immediately.
 
+## Artifact format
+
+When you produce a deliverable for me to look at — status reports, design proposals, end-of-pass walkthroughs, comparison tables, screen mockups, anything I'll *read once and react to* — render it as a beautiful, self-contained **HTML file** under `design/`. Match `design/mvp-design-board.html`:
+
+- One inline `<style>` block driven by CSS custom properties whose names mirror `LearningUI/Theme/CourseBuilderThemePalette.swift` (`--app-canvas`, `--page`, `--sidebar`, `--card`, `--accent`, `--text-primary`, `--text-secondary`, `--success`, `--warning`, `--danger`, …). No inline color literals — always reach for the token.
+- Light/dark via a `data-theme="light"` attribute on `<html>`; provide both swatches in `:root` and `[data-theme="dark"]`.
+- System fonts only (`ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`; `ui-monospace, "JetBrains Mono", Menlo, monospace` for code). No Google Fonts, no CDN, no JS dependencies — the file must open offline.
+- Typography-driven hierarchy, generous whitespace, restrained accents, soft elevation (subtle shadow + 22–28pt corner radii). Elegance over information density.
+
+When the artifact is for *you* — engineering bibles like this file, task lists, prompts, system instructions, code comments, anything a model reads in a future session — keep it clean **markdown**. Markdown is faster to grep, easier to diff, and HTML overhead buys nothing for a model audience.
+
+Quick test: human is the audience → HTML. Model is the audience → markdown.
+
 ## Build gotchas
 
 - **`xcodegen generate` does NOT update `AICourseBuilder.xcworkspace/contents.xcworkspacedata`.** Adding a new local SPM package requires (1) editing `project.yml`, (2) hand-adding a `<FileRef location="group:Pkg"/>` to the workspace contents, (3) running `xcodegen generate`. Symptom of the missed step: blue folder vs. brown-cube SPM icon in Xcode's navigator. Quit Xcode + delete DerivedData if the workspace doesn't re-parse.

@@ -1,0 +1,2962 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Course Builder — MVP Navigation Prototype</title>
+  <style>
+    :root {
+      color-scheme: light;
+
+      --app-canvas: #F7F3EE;
+      --page: #FFFCF8;
+      --sidebar: #102A4A;
+      --sidebar-active: #1A3A63;
+      --card: #FFFEFC;
+      --card-muted: #F5F8FC;
+      --input: #FBFCFE;
+      --code-block: #112746;
+      --note-block: #EEF4FB;
+      --accent-tint: #EDF3FF;
+      --success-tint: #EAF7F2;
+      --warm-tint: #FFF4E6;
+
+      --text-primary: #1A2E47;
+      --text-secondary: #607086;
+      --text-tertiary: #8D99AA;
+      --text-inverse: #FFFFFF;
+      --text-sidebar: #F8FBFF;
+      --text-sidebar-secondary: #AFC0D9;
+
+      --accent: #295FD3;
+      --accent-pressed: #1C4CAF;
+      --accent-soft: #EAF2FF;
+
+      --success: #45B57E;
+      --success-soft: #E9F7F0;
+      --warning: #E4A04D;
+      --warning-soft: #FFF4E4;
+      --danger: #D96C64;
+      --danger-soft: #FCEBE8;
+      --locked: #A6B2C2;
+      --progress-track: #DCE6F3;
+      --progress-current: #7B98D9;
+      --progress-complete: #45B57E;
+
+      --border-subtle: #EEF2F7;
+      --border: #DCE4EF;
+      --border-strong: #C5D2E2;
+      --border-accent: #AFC6F5;
+
+      --hover: rgba(16, 42, 74, 0.04);
+      --selected: rgba(41, 95, 211, 0.10);
+      --scrim: rgba(16, 42, 74, 0.12);
+
+      --glow-warm: rgba(244, 220, 200, 0.48);
+      --glow-blue: rgba(220, 231, 251, 0.52);
+      --shadow-card: 0 24px 60px rgba(16, 42, 74, 0.08);
+      --shadow-float: 0 24px 80px rgba(16, 42, 74, 0.14);
+      --shadow-soft: 0 12px 32px rgba(16, 42, 74, 0.06);
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+
+      --app-canvas: #0C131D;
+      --page: #111B27;
+      --sidebar: #0A1830;
+      --sidebar-active: #153154;
+      --card: #172334;
+      --card-muted: #132031;
+      --input: #0E1C2E;
+      --code-block: #081424;
+      --note-block: #102238;
+      --accent-tint: #12294A;
+      --success-tint: #112721;
+      --warm-tint: #2A1E10;
+
+      --text-primary: #EDF4FF;
+      --text-secondary: #A7B5C9;
+      --text-tertiary: #7E90A8;
+      --text-inverse: #FFFFFF;
+      --text-sidebar: #F2F7FF;
+      --text-sidebar-secondary: #91A8C8;
+
+      --accent: #74A0FF;
+      --accent-pressed: #5E8AEE;
+      --accent-soft: #153154;
+
+      --success: #69D7A3;
+      --success-soft: #10261F;
+      --warning: #F0BF78;
+      --warning-soft: #2F2414;
+      --danger: #EF8F88;
+      --danger-soft: #331A18;
+      --locked: #6D809A;
+      --progress-track: #24384F;
+      --progress-current: #9BB8FF;
+      --progress-complete: #69D7A3;
+
+      --border-subtle: #1A293C;
+      --border: #24364B;
+      --border-strong: #31465F;
+      --border-accent: #4B6FB7;
+
+      --hover: rgba(255, 255, 255, 0.04);
+      --selected: rgba(116, 160, 255, 0.10);
+      --scrim: rgba(0, 0, 0, 0.32);
+
+      --glow-warm: rgba(90, 59, 40, 0.48);
+      --glow-blue: rgba(36, 66, 110, 0.52);
+      --shadow-card: 0 24px 60px rgba(0, 0, 0, 0.26);
+      --shadow-float: 0 24px 80px rgba(0, 0, 0, 0.34);
+      --shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.18);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 16% 12%, var(--glow-warm), transparent 22%),
+        radial-gradient(circle at 78% 18%, var(--glow-blue), transparent 26%),
+        linear-gradient(180deg, var(--app-canvas), color-mix(in srgb, var(--app-canvas) 75%, black 4%));
+      color: var(--text-primary);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-feature-settings: "ss01", "cv11";
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      padding: 22px;
+      min-height: 100vh;
+    }
+
+    .app {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+      max-width: 1760px;
+      margin: 0 auto;
+      min-height: calc(100vh - 44px);
+    }
+
+    /* ───────────── toolbar ───────────── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 22px;
+      background: color-mix(in srgb, var(--page) 88%, transparent);
+      border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+      border-radius: 22px;
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 18px;
+      font-weight: 720;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 22%, white 78%), var(--accent-soft));
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 800;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+    }
+
+    .brand .sub {
+      font-size: 12px;
+      font-weight: 550;
+      color: var(--text-tertiary);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-left: 6px;
+      padding-left: 10px;
+      border-left: 1px solid var(--border);
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .button {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--card) 88%, transparent);
+      color: var(--text-primary);
+      font: 14px ui-sans-serif, -apple-system, sans-serif;
+      font-weight: 650;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+      border-color: var(--border-strong);
+    }
+
+    .button.primary {
+      border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+      background: linear-gradient(180deg, var(--accent), var(--accent-pressed));
+      color: var(--text-inverse);
+      box-shadow: 0 14px 26px color-mix(in srgb, var(--accent) 22%, transparent);
+    }
+
+    .button.primary:hover {
+      box-shadow: 0 18px 32px color-mix(in srgb, var(--accent) 28%, transparent);
+    }
+
+    .button.warm {
+      border-color: color-mix(in srgb, var(--warning) 32%, transparent);
+      background: linear-gradient(180deg, var(--warning), color-mix(in srgb, var(--warning) 84%, black 16%));
+      color: #4A2F0E;
+      box-shadow: 0 14px 26px color-mix(in srgb, var(--warning) 22%, transparent);
+    }
+
+    :root[data-theme="dark"] .button.warm { color: #2A1B05; }
+
+    .button.danger {
+      border-color: color-mix(in srgb, var(--danger) 32%, transparent);
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .button.ghost {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--text-secondary);
+    }
+
+    .button.tiny {
+      padding: 7px 11px;
+      font-size: 12px;
+    }
+
+    .button:disabled,
+    .button[aria-disabled="true"] {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ───────────── main split ───────────── */
+    .split {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 18px;
+      min-height: 0;
+    }
+
+    .rail,
+    .canvas {
+      background: color-mix(in srgb, var(--page) 92%, transparent);
+      border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+      border-radius: 26px;
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+
+    .rail {
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 188px);
+    }
+
+    .rail-header {
+      padding: 18px 20px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .rail-header h2 {
+      margin: 0 0 4px;
+      font-size: 15px;
+      font-weight: 720;
+      letter-spacing: -0.01em;
+    }
+
+    .rail-header p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--text-tertiary);
+      line-height: 1.5;
+    }
+
+    .rail-body {
+      padding: 18px 18px 22px;
+      overflow-y: auto;
+      flex: 1;
+      scrollbar-width: thin;
+    }
+
+    /* ───────────── graph ───────────── */
+    .graph {
+      position: relative;
+      display: grid;
+      gap: 4px;
+    }
+
+    .graph-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .graph-svg .edge {
+      fill: none;
+      stroke: var(--border-strong);
+      stroke-width: 1.4;
+      transition: stroke 200ms ease, opacity 200ms ease;
+      opacity: 0.55;
+    }
+
+    .graph-svg .edge.primary { stroke: color-mix(in srgb, var(--accent) 70%, var(--border-strong)); }
+    .graph-svg .edge.warm { stroke: color-mix(in srgb, var(--warning) 75%, var(--border-strong)); stroke-dasharray: 5 4; }
+    .graph-svg .edge.danger { stroke: color-mix(in srgb, var(--danger) 70%, var(--border-strong)); }
+    .graph-svg .edge.dim { opacity: 0.18; }
+    .graph-svg .edge.active {
+      opacity: 1;
+      stroke-width: 2;
+      filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--accent) 40%, transparent));
+    }
+
+    .graph-row {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 6px;
+      grid-template-columns: 1fr 1fr;
+      margin: 0;
+    }
+
+    .graph-row.solo {
+      grid-template-columns: 1fr;
+    }
+
+    .node {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 22px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 13px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--card) 92%, transparent);
+      color: var(--text-primary);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+      box-shadow: var(--shadow-soft);
+      width: 100%;
+    }
+
+    .node:hover {
+      transform: translateY(-1px);
+      border-color: var(--border-strong);
+    }
+
+    .node.active {
+      border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 80%, var(--card) 20%), var(--card));
+      box-shadow: 0 14px 32px color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+
+    .node .dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--locked) 60%, transparent);
+      border: 2px solid var(--page);
+      box-shadow: 0 0 0 1px var(--border);
+    }
+
+    .node.active .dot {
+      background: var(--accent);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+
+    .node[data-tone="warm"] .dot { background: color-mix(in srgb, var(--warning) 70%, var(--locked)); }
+    .node[data-tone="danger"] .dot { background: color-mix(in srgb, var(--danger) 70%, var(--locked)); }
+    .node[data-tone="success"] .dot { background: var(--success); }
+
+    .node .num {
+      font: 11px ui-monospace, "JetBrains Mono", Menlo, monospace;
+      color: var(--text-tertiary);
+      letter-spacing: 0.05em;
+    }
+
+    .legend {
+      margin-top: 22px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--border-subtle);
+      background: color-mix(in srgb, var(--card-muted) 70%, transparent);
+    }
+
+    .legend h3 {
+      margin: 0 0 10px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-tertiary);
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 6px 0;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .legend-line {
+      width: 22px;
+      height: 2px;
+      flex: none;
+      border-radius: 4px;
+    }
+
+    .legend-line.primary { background: var(--accent); }
+    .legend-line.warm {
+      background-image: linear-gradient(90deg, var(--warning) 50%, transparent 0);
+      background-size: 7px 100%;
+      height: 2px;
+    }
+    .legend-line.danger { background: var(--danger); }
+    .legend-line.neutral { background: var(--border-strong); }
+
+    .legend-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--card-muted);
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    .legend-pill .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--locked);
+      opacity: 0.65;
+    }
+
+    /* ───────────── canvas ───────────── */
+    .canvas {
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 188px);
+      position: relative;
+    }
+
+    .canvas-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: color-mix(in srgb, var(--page) 86%, transparent);
+    }
+
+    .canvas-header .crumb {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 650;
+      color: var(--text-secondary);
+    }
+
+    .canvas-header .crumb .num {
+      font: 11px ui-monospace, "JetBrains Mono", Menlo, monospace;
+      letter-spacing: 0.06em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .canvas-header .canvas-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .canvas-stage {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+      background: var(--page);
+    }
+
+    .stage-scroll {
+      position: absolute;
+      inset: 0;
+      overflow: auto;
+      scrollbar-width: thin;
+    }
+
+    .screen {
+      display: none;
+      min-height: 100%;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    /* ───────────── shared chrome ───────────── */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--card) 88%, transparent);
+      font-size: 12px;
+      color: var(--text-secondary);
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(14px);
+    }
+
+    .section-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-tertiary);
+      font-weight: 700;
+    }
+
+    .badge-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      flex: none;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    /* ───────────── bootstrap screen ───────────── */
+    .boot-screen {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 28px;
+      min-height: 100%;
+      padding: 60px 40px;
+      text-align: center;
+    }
+
+    .boot-screen.active { display: flex; }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      animation: spin 900ms linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .boot-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow-float);
+      padding: 36px 40px;
+      max-width: 460px;
+    }
+
+    .boot-card h2 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+    }
+
+    .boot-card p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .boot-toggle {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    /* ───────────── goal intake screen ───────────── */
+    .goal-screen {
+      padding: 36px 44px 56px;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    .goal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    .goal-header .right {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .gear {
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: transform 140ms ease, border-color 140ms ease;
+    }
+
+    .gear:hover { transform: rotate(20deg); border-color: var(--border-strong); }
+
+    .goal-layout {
+      display: grid;
+      grid-template-columns: minmax(380px, 1.05fr) minmax(300px, 0.95fr);
+      gap: 36px;
+      align-items: center;
+    }
+
+    .goal-copy h2 {
+      margin: 8px 0 12px;
+      font-size: 48px;
+      line-height: 0.96;
+      letter-spacing: -0.04em;
+      font-weight: 760;
+      max-width: 460px;
+    }
+
+    .goal-copy p {
+      margin: 0 0 22px;
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.65;
+      max-width: 460px;
+    }
+
+    .input-block {
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, var(--input), color-mix(in srgb, var(--input) 84%, var(--card) 16%));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
+      margin-bottom: 18px;
+    }
+
+    .input-block .section-label { display: block; margin-bottom: 8px; }
+
+    .goal-input {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 54px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1.5px solid color-mix(in srgb, var(--accent) 36%, var(--border));
+      background: color-mix(in srgb, var(--card) 86%, transparent);
+      color: var(--text-primary);
+      font-size: 15px;
+    }
+
+    .options-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 12px 0 18px;
+    }
+
+    .option-card {
+      padding: 12px 12px 14px;
+      min-height: 80px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--card);
+    }
+
+    .option-card.active {
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 88%, var(--card) 12%), var(--card));
+      border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent);
+    }
+
+    .option-card strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .option-card span {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .check-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 12px;
+      margin: 12px 0 22px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .check-item::before {
+      content: "✓";
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding-top: 4px;
+    }
+
+    .hero-art {
+      position: relative;
+      min-height: 480px;
+      display: grid;
+      place-items: center;
+    }
+
+    .hero-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(0.2px);
+      pointer-events: none;
+    }
+
+    .hero-orb.one {
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle at 30% 30%, var(--glow-warm), transparent 64%);
+      left: -10px;
+      top: 30px;
+    }
+
+    .hero-orb.two {
+      width: 340px;
+      height: 340px;
+      background: radial-gradient(circle at 56% 38%, var(--glow-blue), transparent 60%);
+      right: -10px;
+      bottom: 20px;
+    }
+
+    .hero-stack {
+      position: relative;
+      width: 100%;
+      max-width: 460px;
+      height: 460px;
+    }
+
+    .hero-panel {
+      position: absolute;
+      border-radius: 22px;
+      border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+      background: color-mix(in srgb, var(--card) 92%, transparent);
+      box-shadow: var(--shadow-float);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero-panel.main {
+      left: 50px;
+      right: 30px;
+      bottom: 90px;
+      height: 160px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--sidebar) 84%, white 8%), color-mix(in srgb, var(--sidebar) 96%, black 6%));
+      color: var(--text-inverse);
+      display: flex;
+      align-items: center;
+      padding: 24px 28px;
+      gap: 22px;
+    }
+
+    .hero-panel.main .lambda {
+      font-size: 64px;
+      font-weight: 760;
+      line-height: 1;
+      color: var(--text-inverse);
+    }
+
+    .hero-lines {
+      flex: 1;
+      display: grid;
+      gap: 12px;
+    }
+
+    .hero-line {
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .hero-line.short { width: 42%; }
+    .hero-line.mid { width: 74%; }
+    .hero-line.long { width: 88%; }
+
+    .hero-panel.note {
+      width: 230px;
+      right: 30px;
+      top: 80px;
+      padding: 18px;
+    }
+
+    .hero-panel.mini {
+      width: 160px;
+      height: 92px;
+      left: 60px;
+      top: 30px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--warm-tint) 92%, white 8%), color-mix(in srgb, var(--warm-tint) 68%, transparent));
+    }
+
+    .note-lines {
+      display: grid;
+      gap: 10px;
+    }
+
+    .note-line {
+      height: 8px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--border) 85%, transparent);
+    }
+
+    .note-line:nth-child(1) { width: 64%; }
+    .note-line:nth-child(2) { width: 82%; }
+    .note-line:nth-child(3) { width: 54%; }
+    .note-line:nth-child(4) { width: 76%; }
+
+    /* ───────────── planning progress / preview / error ───────────── */
+    .center-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100%;
+      padding: 60px 40px;
+      gap: 24px;
+      text-align: center;
+    }
+
+    .progress-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow-float);
+      padding: 36px 44px;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .progress-card h2 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+    }
+
+    .progress-card p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .mode-toggle {
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 999px;
+      background: var(--card-muted);
+      border: 1px solid var(--border);
+    }
+
+    .mode-toggle button {
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .mode-toggle button.on {
+      background: var(--card);
+      color: var(--text-primary);
+      box-shadow: var(--shadow-card);
+    }
+
+    /* preview */
+    .preview-screen {
+      padding: 36px 44px 56px;
+      max-width: 920px;
+      margin: 0 auto;
+    }
+
+    .preview-screen .lead {
+      font-size: 36px;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      margin: 12px 0 10px;
+      font-weight: 760;
+    }
+
+    .preview-screen .blurb {
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.6;
+      max-width: 660px;
+      margin: 0 0 22px;
+    }
+
+    .preview-summary {
+      padding: 22px;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      box-shadow: var(--shadow-card);
+      margin-bottom: 24px;
+    }
+
+    .preview-summary p {
+      margin: 12px 0 14px;
+      font-size: 15px;
+      line-height: 1.65;
+      color: var(--text-primary);
+    }
+
+    .preview-summary .chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .stage-list {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .preview-stage {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 12px;
+      padding: 16px 18px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .preview-stage h4 {
+      margin: 0 0 4px;
+      font-size: 16px;
+      letter-spacing: -0.015em;
+    }
+
+    .preview-stage p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    /* error */
+    .error-card {
+      background: var(--card);
+      border: 1px solid color-mix(in srgb, var(--danger) 24%, var(--border));
+      border-radius: 24px;
+      padding: 36px 40px;
+      max-width: 520px;
+      box-shadow: var(--shadow-float);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      align-items: center;
+      text-align: center;
+    }
+
+    .error-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 999px;
+      background: var(--danger-soft);
+      color: var(--danger);
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .error-card h2 {
+      margin: 0;
+      font-size: 21px;
+      letter-spacing: -0.02em;
+    }
+
+    .error-card p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.55;
+      max-width: 440px;
+    }
+
+    .error-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding-top: 8px;
+    }
+
+    .error-hint {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: var(--warning-soft);
+      color: color-mix(in srgb, var(--warning) 70%, var(--text-primary));
+      border: 1px solid color-mix(in srgb, var(--warning) 36%, transparent);
+      font-size: 12px;
+    }
+
+    /* ───────────── sidebar shell mock ───────────── */
+    .sidebar-shell {
+      display: grid;
+      grid-template-columns: 132px 1fr;
+      min-height: 100%;
+      background: var(--page);
+    }
+
+    .side {
+      background: linear-gradient(180deg, var(--sidebar), color-mix(in srgb, var(--sidebar) 80%, black 20%));
+      padding: 22px 16px;
+      color: var(--text-sidebar);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .side-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-sidebar);
+      margin-bottom: 6px;
+    }
+
+    .side-brand .brand-mark {
+      background: rgba(255,255,255,0.08);
+      color: var(--text-sidebar);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12);
+      width: 26px;
+      height: 26px;
+    }
+
+    .nav-group {
+      display: grid;
+      gap: 6px;
+    }
+
+    .nav-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.04);
+      background: transparent;
+      color: var(--text-sidebar-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      font: inherit;
+      transition: background 140ms ease, color 140ms ease;
+    }
+
+    .nav-pill:hover { background: rgba(255,255,255,0.04); color: var(--text-sidebar); }
+
+    .nav-pill.active {
+      background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+      color: var(--text-sidebar);
+      border-color: rgba(255,255,255,0.14);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-pill.inert {
+      cursor: default;
+      opacity: 0.45;
+    }
+    .nav-pill.inert:hover {
+      background: transparent;
+      color: var(--text-sidebar-secondary);
+    }
+
+    .nav-icon-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.10);
+      color: inherit;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .user-card {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 10px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-sidebar);
+    }
+
+    .avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #DDE6F4, #B5C7E1);
+    }
+
+    /* dashboard / program map main */
+    .main-pane {
+      padding: 26px 28px 36px;
+      background: var(--page);
+      overflow: hidden;
+    }
+
+    .dash-headline {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .dash-headline h3 {
+      margin: 0;
+      font-size: 34px;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      font-weight: 760;
+    }
+
+    .dash-headline .tiny {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    .top-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .metric-pill {
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      display: grid;
+      gap: 6px;
+    }
+
+    .metric-pill strong {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 650;
+    }
+
+    .metric-main {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 720;
+      letter-spacing: -0.02em;
+    }
+
+    .metric-main .badge-circle { width: 28px; height: 28px; font-size: 12px; }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .card {
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .card-title {
+      margin: 0 0 10px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-tertiary);
+      font-weight: 700;
+    }
+
+    .session-card-title {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .session-card-title h4 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+    }
+
+    .session-card-title p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .session-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .session-foot .tiny {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    .progress-row {
+      display: grid;
+      grid-template-columns: repeat(10, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 14px;
+    }
+
+    .progress-dot {
+      height: 9px;
+      border-radius: 999px;
+      background: var(--progress-track);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-dot.complete::before,
+    .progress-dot.current::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+    }
+
+    .progress-dot.complete::before { background: var(--progress-complete); }
+    .progress-dot.current::before { background: var(--progress-current); }
+
+    .bottom-cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .small-card {
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      display: grid;
+      gap: 8px;
+      min-height: 134px;
+    }
+
+    .small-card strong { font-size: 14px; }
+    .small-card p { margin: 0; font-size: 12px; color: var(--text-secondary); line-height: 1.55; }
+
+    .reset-row {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    /* program map */
+    .program-pane {
+      padding: 26px 28px 36px;
+      background: var(--page);
+      overflow: hidden;
+    }
+
+    .program-list {
+      position: relative;
+      display: grid;
+      gap: 12px;
+      padding-left: 28px;
+      margin-bottom: 22px;
+    }
+
+    .program-path {
+      position: absolute;
+      left: 6px;
+      top: 14px;
+      bottom: 14px;
+      width: 2px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--success) 56%, transparent), color-mix(in srgb, var(--locked) 60%, transparent));
+    }
+
+    .stage-card {
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      position: relative;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .stage-card.current {
+      border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent), var(--shadow-card);
+    }
+
+    .stage-card::before {
+      content: "";
+      position: absolute;
+      left: -28px;
+      top: 22px;
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: var(--locked);
+      border: 3px solid var(--page);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--locked) 25%, transparent);
+    }
+
+    .stage-card.current::before {
+      background: var(--success);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--success) 24%, transparent);
+    }
+
+    .stage-card.complete::before {
+      background: var(--success);
+    }
+
+    .stage-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .stage-head h4 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.05;
+      letter-spacing: -0.025em;
+    }
+
+    .stage-head .tiny { font-size: 12px; color: var(--text-tertiary); }
+
+    .stage-status {
+      font-size: 12px;
+      color: var(--success);
+      font-weight: 650;
+    }
+    .stage-status.locked { color: var(--text-secondary); }
+
+    .session-list {
+      display: grid;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .session-row {
+      display: grid;
+      grid-template-columns: 26px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 34px;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 10px;
+      transition: background 140ms ease;
+    }
+
+    .session-row:hover { background: var(--hover); }
+
+    .session-row .num {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: var(--card-muted);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .session-row.complete .num {
+      background: var(--success-soft);
+      color: var(--success);
+      border-color: color-mix(in srgb, var(--success) 25%, transparent);
+    }
+
+    .session-row.current .num {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+    }
+
+    .session-row .trail {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    .lock-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 18px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--card) 86%, var(--card-muted) 14%);
+      color: var(--text-secondary);
+      font-size: 13px;
+      position: relative;
+    }
+
+    .lock-row::before {
+      content: "";
+      position: absolute;
+      left: -28px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: var(--locked);
+      border: 3px solid var(--page);
+    }
+
+    .lock-tag {
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--card-muted);
+      color: var(--text-tertiary);
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .grad-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 56%, var(--card) 44%), var(--card));
+      box-shadow: var(--shadow-card);
+    }
+
+    .grad-card strong { font-size: 14px; }
+    .grad-card p { margin: 4px 0 0; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+    .grad-tag {
+      margin-left: auto;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: var(--card-muted);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 650;
+    }
+
+    /* session workspace */
+    .workspace {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+      background: var(--page);
+    }
+
+    .ws-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 32px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: color-mix(in srgb, var(--page) 92%, transparent);
+    }
+
+    .ws-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .ws-progress {
+      font: 12px ui-monospace, "JetBrains Mono", Menlo, monospace;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    .ws-content {
+      flex: 1;
+      padding: 36px 40px 24px;
+      max-width: 760px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .ws-content h2 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.05;
+      letter-spacing: -0.025em;
+    }
+
+    .ws-content .obj {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .block-card {
+      padding: 22px 24px;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .block-card .block-eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .block-card h3 {
+      margin: 0;
+      font-size: 19px;
+      letter-spacing: -0.015em;
+    }
+
+    .block-card p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .code-sample {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--code-block), color-mix(in srgb, var(--code-block) 84%, black 16%));
+      color: rgba(255,255,255,0.92);
+      font: 13px/1.55 ui-monospace, "JetBrains Mono", Menlo, monospace;
+      letter-spacing: -0.005em;
+      overflow: hidden;
+    }
+
+    .mc-options {
+      display: grid;
+      gap: 8px;
+    }
+
+    .mc-option {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      font-size: 14px;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .mc-option .marker {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 1.5px solid var(--border-strong);
+      flex: none;
+    }
+
+    .mc-option.picked {
+      border-color: color-mix(in srgb, var(--accent) 36%, var(--border));
+      background: var(--accent-soft);
+    }
+
+    .mc-option.picked .marker {
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 3px var(--accent-soft);
+    }
+
+    .ws-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 32px;
+      border-top: 1px solid var(--border-subtle);
+      background: color-mix(in srgb, var(--page) 92%, transparent);
+    }
+
+    /* api key sheet (modal overlay on top of canvas) */
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: var(--scrim);
+      backdrop-filter: blur(2px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      padding: 40px;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal-card {
+      max-width: 480px;
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 28px 30px;
+      box-shadow: var(--shadow-float);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-card h2 {
+      margin: 0;
+      font-size: 21px;
+      letter-spacing: -0.02em;
+    }
+
+    .modal-card p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .field input {
+      padding: 11px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--input);
+      color: var(--text-primary);
+      font: inherit;
+      font-size: 14px;
+    }
+
+    .field input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+
+    .field .hint {
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 6px;
+    }
+
+    /* ───────────── footer legend (full width) ───────────── */
+    .footer-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px 24px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 22px;
+      border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+      border-radius: 22px;
+      background: color-mix(in srgb, var(--page) 86%, transparent);
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(18px);
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .footer-legend .group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .footer-legend .swatch {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .footer-legend .swatch::before {
+      content: "";
+      width: 14px;
+      height: 4px;
+      border-radius: 4px;
+    }
+
+    .footer-legend .swatch.primary::before { background: var(--accent); }
+    .footer-legend .swatch.warm::before { background: var(--warning); }
+    .footer-legend .swatch.danger::before { background: var(--danger); }
+    .footer-legend .swatch.neutral::before { background: var(--border-strong); }
+
+    .footer-legend kbd {
+      font: 11px ui-monospace, "JetBrains Mono", Menlo, monospace;
+      padding: 2px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card-muted);
+      color: var(--text-secondary);
+      letter-spacing: 0.04em;
+    }
+
+    /* ───────────── responsive ───────────── */
+    @media (max-width: 1280px) {
+      .split { grid-template-columns: 320px 1fr; }
+      .goal-layout { grid-template-columns: 1fr; }
+      .hero-art { min-height: 320px; }
+    }
+
+    @media (max-width: 960px) {
+      .split { grid-template-columns: 1fr; }
+      .rail, .canvas { max-height: none; }
+      .top-metrics, .bottom-cards { grid-template-columns: 1fr; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .options-row { grid-template-columns: 1fr; }
+      .check-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- ───────────────── toolbar ───────────────── -->
+    <header class="toolbar">
+      <div class="brand">
+        <span class="brand-mark">A</span>
+        <span>AI Course Builder</span>
+        <span class="sub">Navigation Prototype</span>
+      </div>
+      <div class="toolbar-actions">
+        <button class="button ghost tiny" id="reset-btn" type="button">Reset to first launch</button>
+        <button class="button" id="theme-toggle" type="button">Switch to Dark</button>
+      </div>
+    </header>
+
+    <!-- ───────────────── split: rail + canvas ───────────────── -->
+    <main class="split">
+      <!-- ─── rail ─── -->
+      <aside class="rail">
+        <div class="rail-header">
+          <h2>Navigation graph</h2>
+          <p>Click a node to jump. Buttons in the artboard fire the same edges. Hover a node to spotlight its arrows.</p>
+        </div>
+        <div class="rail-body">
+          <div class="graph" id="graph">
+            <!-- arrows -->
+            <svg class="graph-svg" id="edges" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <marker id="ah-primary" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+                </marker>
+                <marker id="ah-neutral" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M0,0 L10,5 L0,10 z" fill="var(--border-strong)"/>
+                </marker>
+                <marker id="ah-warm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M0,0 L10,5 L0,10 z" fill="var(--warning)"/>
+                </marker>
+                <marker id="ah-danger" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M0,0 L10,5 L0,10 z" fill="var(--danger)"/>
+                </marker>
+              </defs>
+            </svg>
+
+            <!-- rows -->
+            <div class="graph-row solo">
+              <button class="node" data-node="bootstrap"><span class="dot"></span><span>Bootstrap</span><span class="num">00</span></button>
+            </div>
+            <div class="graph-row">
+              <button class="node" data-node="goalIntake"><span class="dot"></span><span>Goal Intake</span><span class="num">01</span></button>
+              <button class="node" data-node="apiKey" data-tone="warm"><span class="dot"></span><span>API Key Sheet</span><span class="num">08</span></button>
+            </div>
+            <div class="graph-row">
+              <button class="node" data-node="planningOutline"><span class="dot"></span><span>Planning · Outline</span><span class="num">02a</span></button>
+              <button class="node" data-node="planningFull"><span class="dot"></span><span>Planning · Full</span><span class="num">02b</span></button>
+            </div>
+            <div class="graph-row">
+              <button class="node" data-node="programPreview"><span class="dot"></span><span>Program Preview</span><span class="num">03</span></button>
+              <button class="node" data-node="planningError" data-tone="danger"><span class="dot"></span><span>Planning Error</span><span class="num">04</span></button>
+            </div>
+            <div class="graph-row">
+              <button class="node" data-node="home" data-tone="success"><span class="dot"></span><span>Home Dashboard</span><span class="num">05</span></button>
+              <button class="node" data-node="programMap" data-tone="success"><span class="dot"></span><span>Program Map</span><span class="num">06</span></button>
+            </div>
+            <div class="graph-row solo">
+              <button class="node" data-node="sessionWorkspace"><span class="dot"></span><span>Session Workspace</span><span class="num">07</span></button>
+            </div>
+          </div>
+
+          <div class="legend">
+            <h3>Edge legend</h3>
+            <div class="legend-row"><span class="legend-line primary"></span> Primary path (happy flow)</div>
+            <div class="legend-row"><span class="legend-line warm"></span> Auto-open / recovery</div>
+            <div class="legend-row"><span class="legend-line danger"></span> Error path</div>
+            <div class="legend-row"><span class="legend-line neutral"></span> Sidebar / dismissal</div>
+            <h3 style="margin-top: 14px;">Sidebar pills</h3>
+            <div class="legend-row">
+              <span class="legend-pill"><span class="dot"></span> Sessions</span>
+              <span class="legend-pill"><span class="dot"></span> AI Tutor</span>
+            </div>
+            <div class="legend-row">
+              <span class="legend-pill"><span class="dot"></span> Review</span>
+              <span class="legend-pill"><span class="dot"></span> Notes</span>
+            </div>
+            <div class="legend-row" style="margin-top:6px;">Inert until their screens land. Visible in the rail's Home/Program Map mocks too.</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ─── canvas ─── -->
+      <section class="canvas">
+        <div class="canvas-header">
+          <div class="crumb">
+            <span class="num" id="crumb-num">00</span>
+            <span id="crumb-label">Bootstrap</span>
+          </div>
+          <div class="canvas-actions" id="canvas-actions">
+            <!-- per-screen toggles populated dynamically -->
+          </div>
+        </div>
+
+        <div class="canvas-stage">
+          <div class="stage-scroll" id="stage-scroll">
+
+            <!-- ───── BOOTSTRAP ───── -->
+            <div class="screen" data-screen="bootstrap">
+              <div class="boot-screen active">
+                <div class="spinner"></div>
+                <div class="boot-card">
+                  <h2>Loading your program…</h2>
+                  <p>Restoring profile, looking up your active goal, and checking whether a program already lives on disk.</p>
+                </div>
+                <div class="boot-toggle">
+                  <button class="button primary" data-action="boot-first-launch" type="button">Simulate first launch</button>
+                  <button class="button" data-action="boot-returning" type="button">Simulate returning user</button>
+                </div>
+                <p style="margin: 0; color: var(--text-tertiary); font-size: 12px;">First launch routes through Goal Intake. A returning user with a goal in the DB resolves straight to Home.</p>
+              </div>
+            </div>
+
+            <!-- ───── GOAL INTAKE ───── -->
+            <div class="screen" data-screen="goalIntake">
+              <div class="goal-screen">
+                <div class="goal-header">
+                  <div class="brand">
+                    <span class="brand-mark">A</span>
+                    <span>AI Course Builder</span>
+                  </div>
+                  <div class="right">
+                    <span class="chip">Step 1 of 4</span>
+                    <button class="gear" data-action="open-api-key" title="Configure API key" type="button" aria-label="Open API key sheet">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="goal-layout">
+                  <div class="goal-copy">
+                    <h2>Let's build your personalized course</h2>
+                    <p>Tell us your goal and we'll turn it into a structured learning path with focused sessions, practice, checkpoints, and review.</p>
+
+                    <div class="input-block">
+                      <span class="section-label">Learning Goal</span>
+                      <div class="goal-input">
+                        <span class="badge-circle">λ</span>
+                        <span>I want to learn Haskell programming language</span>
+                      </div>
+                    </div>
+
+                    <span class="section-label">Starting Level</span>
+                    <div class="options-row">
+                      <div class="option-card active"><strong>Beginner</strong><span>New to the topic</span></div>
+                      <div class="option-card"><strong>Intermediate</strong><span>Some experience</span></div>
+                      <div class="option-card"><strong>Advanced</strong><span>Very comfortable</span></div>
+                    </div>
+
+                    <span class="section-label">Time Budget</span>
+                    <div class="options-row">
+                      <div class="option-card"><strong>30 min/day</strong><span>Fast and consistent</span></div>
+                      <div class="option-card active"><strong>1 hr/day</strong><span>Balanced pace</span></div>
+                      <div class="option-card"><strong>2+ hrs/day</strong><span>Deep immersion</span></div>
+                    </div>
+
+                    <span class="section-label">We'll Generate</span>
+                    <div class="check-grid">
+                      <div class="check-item">Structured learning path</div>
+                      <div class="check-item">AI tutor hints and feedback</div>
+                      <div class="check-item">Hands-on practice and projects</div>
+                      <div class="check-item">Review scheduling and milestones</div>
+                    </div>
+
+                    <div class="action-row">
+                      <button class="button" data-action="goal-preview" type="button">Preview Plan</button>
+                      <button class="button primary" data-action="goal-start" type="button">Start Learning</button>
+                    </div>
+                  </div>
+
+                  <div class="hero-art" aria-hidden="true">
+                    <div class="hero-orb one"></div>
+                    <div class="hero-orb two"></div>
+                    <div class="hero-stack">
+                      <div class="hero-panel mini"></div>
+                      <div class="hero-panel note">
+                        <span class="section-label">Session Blueprint</span>
+                        <div class="note-lines">
+                          <div class="note-line"></div>
+                          <div class="note-line"></div>
+                          <div class="note-line"></div>
+                          <div class="note-line"></div>
+                        </div>
+                      </div>
+                      <div class="hero-panel main">
+                        <div class="lambda">λ</div>
+                        <div class="hero-lines">
+                          <div class="hero-line short"></div>
+                          <div class="hero-line long"></div>
+                          <div class="hero-line mid"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ───── PLANNING PROGRESS (outline + full) ───── -->
+            <div class="screen" data-screen="planningOutline">
+              <div class="center-card">
+                <div class="progress-card">
+                  <div class="spinner"></div>
+                  <h2 id="planning-outline-h">Drafting your outline…</h2>
+                  <p>Claude is sketching the high-level shape of your journey. This usually takes a few seconds.</p>
+                </div>
+                <div class="boot-toggle">
+                  <button class="button primary" data-action="outline-success" type="button">Simulate outline success</button>
+                  <button class="button danger" data-action="outline-fail" type="button">Simulate outline error</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="screen" data-screen="planningFull">
+              <div class="center-card">
+                <div class="progress-card">
+                  <div class="spinner"></div>
+                  <h2>Designing your program…</h2>
+                  <p>Claude is mapping your stages, sprints, and first session. Hang tight — this can take up to a minute.</p>
+                </div>
+                <div class="boot-toggle">
+                  <button class="button primary" data-action="full-success" type="button">Simulate blueprint success</button>
+                  <button class="button danger" data-action="full-fail" type="button">Simulate blueprint error</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- ───── PROGRAM PREVIEW ───── -->
+            <div class="screen" data-screen="programPreview">
+              <div class="preview-screen">
+                <span class="chip">Step 2 of 4</span>
+                <h2 class="lead">Your program outline</h2>
+                <p class="blurb">This is the shape of your journey. Refine the goal if anything feels off, or start learning and we'll generate your first session.</p>
+
+                <div class="preview-summary">
+                  <span class="section-label">Summary</span>
+                  <p>A 6-week functional-programming runway focused on getting you fluent enough in Haskell to read open-source libraries, ship a small CLI tool, and reason about types without a compiler in your face.</p>
+                  <div class="chips">
+                    <span class="chip">6 weeks</span>
+                    <span class="chip">5 stages</span>
+                    <span class="chip">Haskell</span>
+                  </div>
+                </div>
+
+                <span class="section-label" style="display:block;margin-bottom:10px;">Stages</span>
+                <div class="stage-list">
+                  <div class="preview-stage">
+                    <span class="badge-circle">1</span>
+                    <div>
+                      <h4>Functions &amp; Types</h4>
+                      <p>Build instinct for total functions, type signatures, and the type-driven mindset.</p>
+                    </div>
+                  </div>
+                  <div class="preview-stage">
+                    <span class="badge-circle">2</span>
+                    <div>
+                      <h4>Algebraic Data Types</h4>
+                      <p>Model your domain with sums and products. See how pattern matching falls out for free.</p>
+                    </div>
+                  </div>
+                  <div class="preview-stage">
+                    <span class="badge-circle">3</span>
+                    <div>
+                      <h4>Type Classes &amp; Polymorphism</h4>
+                      <p>Functor, Applicative, Monad — by the end of this stage you'll know why people care.</p>
+                    </div>
+                  </div>
+                  <div class="preview-stage">
+                    <span class="badge-circle">4</span>
+                    <div>
+                      <h4>IO &amp; Real Programs</h4>
+                      <p>Bridge the pure core to a messy world. Read from disk, talk to the network, stay sane.</p>
+                    </div>
+                  </div>
+                  <div class="preview-stage">
+                    <span class="badge-circle">5</span>
+                    <div>
+                      <h4>Capstone: A Small CLI</h4>
+                      <p>Ship a real tool you can use day-to-day. Tie everything together.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="action-row">
+                  <button class="button" data-action="preview-refine" type="button">Refine Goal</button>
+                  <button class="button primary" data-action="preview-confirm" type="button">Start Learning</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- ───── PLANNING ERROR ───── -->
+            <div class="screen" data-screen="planningError">
+              <div class="center-card">
+                <div class="error-card">
+                  <div class="error-icon">!</div>
+                  <h2 id="error-title">Couldn't generate your program</h2>
+                  <p id="error-body">The model returned an error. You can try again, fall back to a demo program, or come back to this in a moment.</p>
+
+                  <div class="error-hint" id="error-hint" style="display:none;">
+                    <span>↗</span><span>Auto-opening API key sheet…</span>
+                  </div>
+
+                  <div class="error-actions" id="error-actions">
+                    <button class="button primary" data-action="error-retry" type="button">Try Again</button>
+                    <button class="button" data-action="error-demo" type="button">Use Demo Program</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ───── HOME DASHBOARD ───── -->
+            <div class="screen" data-screen="home">
+              <div class="sidebar-shell">
+                <aside class="side">
+                  <div class="side-brand">
+                    <span class="brand-mark">A</span>
+                    <span>Course Builder</span>
+                  </div>
+                  <div class="nav-group">
+                    <button class="nav-pill active" data-action="route-home" type="button"><span class="nav-icon-dot">⌂</span> Home</button>
+                    <button class="nav-pill" data-action="route-programMap" type="button"><span class="nav-icon-dot">◎</span> Program Map</button>
+                    <button class="nav-pill inert" type="button" disabled aria-disabled="true"><span class="nav-icon-dot">▣</span> Sessions</button>
+                    <button class="nav-pill inert" type="button" disabled aria-disabled="true"><span class="nav-icon-dot">✦</span> AI Tutor</button>
+                    <button class="nav-pill inert" type="button" disabled aria-disabled="true"><span class="nav-icon-dot">↺</span> Review</button>
+                    <button class="nav-pill inert" type="button" disabled aria-disabled="true"><span class="nav-icon-dot">✎</span> Notes</button>
+                  </div>
+                  <div class="user-card">
+                    <div class="avatar"></div>
+                    <div>
+                      <div style="font-size:13px;font-weight:650;">Alex Kim</div>
+                      <div style="font-size:11px;color:var(--text-sidebar-secondary);">learner</div>
+                    </div>
+                  </div>
+                </aside>
+
+                <main class="main-pane">
+                  <div class="dash-headline">
+                    <div>
+                      <h3>Haskell Journey</h3>
+                      <div class="tiny">Beginner • 1 hr/day</div>
+                    </div>
+                    <button class="button primary" data-action="home-resume" type="button">Resume Session</button>
+                  </div>
+
+                  <div class="top-metrics">
+                    <div class="metric-pill">
+                      <strong>Current Stage</strong>
+                      <div class="metric-main"><span class="badge-circle">1</span> Functions &amp; Types</div>
+                      <span style="font-size:12px;color:var(--text-tertiary);">5 / 12 sessions</span>
+                    </div>
+                    <div class="metric-pill">
+                      <strong>This Week's Focus</strong>
+                      <div class="metric-main"><span class="badge-circle">◎</span> Type Signatures</div>
+                      <span style="font-size:12px;color:var(--text-tertiary);">3 sessions • 2 hr</span>
+                    </div>
+                    <div class="metric-pill">
+                      <strong>Streak</strong>
+                      <div class="metric-main"><span style="font-size:22px;">🔥</span> 7 days</div>
+                      <span style="font-size:12px;color:var(--text-tertiary);">Keep it going</span>
+                    </div>
+                  </div>
+
+                  <div class="dashboard-grid">
+                    <section class="card">
+                      <div class="card-title">Today's Session</div>
+                      <div class="session-card-title">
+                        <div>
+                          <h4>Reading Type Signatures</h4>
+                          <p>Understand how to read and interpret Haskell type signatures end-to-end.</p>
+                        </div>
+                        <span class="badge-circle" style="width:36px;height:36px;font-size:14px;">λ</span>
+                      </div>
+                      <div class="session-foot">
+                        <span class="tiny">35 min · 3 exercises · 1 checkpoint</span>
+                        <button class="button primary" data-action="home-resume" type="button">Continue Session</button>
+                      </div>
+                    </section>
+
+                    <section class="card">
+                      <div class="card-title">Progress</div>
+                      <strong style="font-size:15px;">Completed Sessions</strong>
+                      <div style="font-size:12px;color:var(--text-tertiary);margin-top:4px;">8 / 24 in the current journey</div>
+                      <div class="progress-row">
+                        <div class="progress-dot complete"></div>
+                        <div class="progress-dot complete"></div>
+                        <div class="progress-dot complete"></div>
+                        <div class="progress-dot complete"></div>
+                        <div class="progress-dot current"></div>
+                        <div class="progress-dot"></div>
+                        <div class="progress-dot"></div>
+                        <div class="progress-dot"></div>
+                        <div class="progress-dot"></div>
+                        <div class="progress-dot"></div>
+                      </div>
+                    </section>
+                  </div>
+
+                  <div class="bottom-cards">
+                    <section class="small-card">
+                      <div class="card-title">Weak Spots</div>
+                      <strong>Type Classes</strong>
+                      <p>Accuracy is dipping whenever the abstractions stop being concrete.</p>
+                    </section>
+                    <section class="small-card">
+                      <div class="card-title">Recommended Review</div>
+                      <strong>Algebraic Data Types</strong>
+                      <p>Last reviewed 5 days ago. Good moment to bring it back before moving on.</p>
+                    </section>
+                    <section class="small-card">
+                      <div class="card-title">Weekly Milestone</div>
+                      <strong>Complete 3 more sessions</strong>
+                      <p>Finish this stage and unlock the next block on type classes.</p>
+                    </section>
+                  </div>
+
+                  <div class="reset-row">
+                    <button class="button danger tiny" data-action="home-reset" type="button">Reset goal</button>
+                  </div>
+                </main>
+              </div>
+            </div>
+
+            <!-- ───── PROGRAM MAP ───── -->
+            <div class="screen" data-screen="programMap">
+              <div class="sidebar-shell">
+                <aside class="side">
+                  <div class="side-brand">
+                    <span class="brand-mark">A</span>
+                    <span>Course Builder</span>
+                  </div>
+                  <div class="nav-group">
+                    <button class="nav-pill" data-action="route-home" type="button"><span class="nav-icon-dot">⌂</span> Home</button>
+                    <button class="nav-pill active" data-action="route-programMap" type="button"><span class="nav-icon-dot">◎</span> Program Map</button>
+                    <button class="nav-pill inert" type="button" disabled aria-disabled="true"><span class="nav-icon-dot">▣</span> Sessions</button>
+                    <button class="nav-pill inert" type="button" disabled aria-disabled="true"><span class="nav-icon-dot">✦</span> AI Tutor</button>
+                    <button class="nav-pill inert" type="button" disabled aria-disabled="true"><span class="nav-icon-dot">↺</span> Review</button>
+                    <button class="nav-pill inert" type="button" disabled aria-disabled="true"><span class="nav-icon-dot">✎</span> Notes</button>
+                  </div>
+                  <div class="user-card">
+                    <div class="avatar"></div>
+                    <div>
+                      <div style="font-size:13px;font-weight:650;">Alex Kim</div>
+                      <div style="font-size:11px;color:var(--text-sidebar-secondary);">learner</div>
+                    </div>
+                  </div>
+                </aside>
+
+                <main class="program-pane">
+                  <div class="dash-headline">
+                    <div>
+                      <h3>Your Program Map</h3>
+                      <div class="tiny">A personalized path to your goal</div>
+                    </div>
+                    <button class="button" type="button">View as List</button>
+                  </div>
+
+                  <div class="program-list">
+                    <div class="program-path"></div>
+
+                    <article class="stage-card complete">
+                      <div class="stage-head">
+                        <div>
+                          <div class="tiny" style="color:var(--text-tertiary);">Stage 1</div>
+                          <h4>Functions &amp; Types</h4>
+                        </div>
+                        <div class="stage-status">Completed · 12 / 12</div>
+                      </div>
+                    </article>
+
+                    <article class="stage-card current">
+                      <div class="stage-head">
+                        <div>
+                          <div class="tiny" style="color:var(--text-tertiary);">Stage 2</div>
+                          <h4>Algebraic Data Types</h4>
+                          <div class="tiny" style="margin-top:4px;color:var(--text-tertiary);">Model your domain with sums and products.</div>
+                        </div>
+                        <div class="stage-status">In Progress · 4 / 8</div>
+                      </div>
+                      <div class="session-list">
+                        <div class="session-row complete" data-action="map-session"><span class="num">✓</span><span>Sums and Products</span><span class="trail">25 min</span></div>
+                        <div class="session-row complete" data-action="map-session"><span class="num">✓</span><span>Pattern Matching Fundamentals</span><span class="trail">30 min</span></div>
+                        <div class="session-row complete" data-action="map-session"><span class="num">✓</span><span>Recursive Data Types</span><span class="trail">35 min</span></div>
+                        <div class="session-row complete" data-action="map-session"><span class="num">✓</span><span>Newtype vs. Data</span><span class="trail">25 min</span></div>
+                        <div class="session-row current" data-action="map-session"><span class="num">5</span><span>Maybe and Either by Hand</span><span class="trail">In progress</span></div>
+                        <div class="session-row" data-action="map-session"><span class="num">6</span><span>Smart Constructors</span><span class="trail">30 min</span></div>
+                      </div>
+                    </article>
+
+                    <div class="lock-row">
+                      <span>Stage 3 · Type Classes &amp; Polymorphism</span>
+                      <span class="lock-tag">Locked</span>
+                    </div>
+                    <div class="lock-row">
+                      <span>Stage 4 · IO &amp; Real Programs</span>
+                      <span class="lock-tag">Locked</span>
+                    </div>
+                    <div class="lock-row">
+                      <span>Stage 5 · Capstone: A Small CLI</span>
+                      <span class="lock-tag">Locked</span>
+                    </div>
+                  </div>
+
+                  <div class="grad-card">
+                    <span class="badge-circle" style="width:38px;height:38px;font-size:18px;">🎓</span>
+                    <div>
+                      <strong>Graduation Goal</strong>
+                      <p>Ship a small CLI tool you'd actually use. Read at least one open-source Haskell library end-to-end.</p>
+                    </div>
+                    <span class="grad-tag">0 / 4 projects</span>
+                  </div>
+                </main>
+              </div>
+            </div>
+
+            <!-- ───── SESSION WORKSPACE ───── -->
+            <div class="screen" data-screen="sessionWorkspace">
+              <div class="workspace">
+                <div class="ws-topbar">
+                  <button class="ws-back" data-action="ws-back" type="button">
+                    <span style="font-size: 14px;">←</span>
+                    <span>Back</span>
+                  </button>
+                  <div class="ws-progress">Block 3 of 10</div>
+                  <div></div>
+                </div>
+
+                <div class="ws-content">
+                  <div>
+                    <h2>Reading Type Signatures</h2>
+                    <p class="obj">Build the muscle for reading Haskell type signatures aloud — the type tells you almost everything you need.</p>
+                  </div>
+
+                  <div class="block-card">
+                    <span class="block-eyebrow">Concept</span>
+                    <h3>Currying turns multi-argument functions into chains</h3>
+                    <p>Every Haskell function technically takes one argument. <code>add :: Int -&gt; Int -&gt; Int</code> isn't a function of two arguments — it's a function of one <code>Int</code> that returns a function of one <code>Int</code> that returns an <code>Int</code>. Read right-associatively and the arrows make sense.</p>
+                    <div class="code-sample">add :: Int -&gt; Int -&gt; Int
+add x y = x + y
+
+addFive :: Int -&gt; Int
+addFive = add 5</div>
+                  </div>
+
+                  <div class="block-card">
+                    <span class="block-eyebrow">Multiple choice</span>
+                    <h3>What's the type of <code>map (+ 1)</code>?</h3>
+                    <div class="mc-options">
+                      <div class="mc-option"><span class="marker"></span>Int -&gt; Int</div>
+                      <div class="mc-option picked"><span class="marker"></span>[Int] -&gt; [Int]</div>
+                      <div class="mc-option"><span class="marker"></span>(Int -&gt; Int) -&gt; [Int]</div>
+                      <div class="mc-option"><span class="marker"></span>Num a =&gt; [a] -&gt; [a]</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="ws-footer">
+                  <button class="button ghost" type="button">← Back</button>
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <button class="button" data-action="ws-done" type="button">Done</button>
+                    <button class="button primary" type="button">Next →</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ───── modal: api key sheet ───── -->
+            <div class="modal-backdrop" id="apikey-backdrop">
+              <div class="modal-card" role="dialog" aria-labelledby="apikey-title">
+                <div>
+                  <h2 id="apikey-title">Anthropic API Key</h2>
+                  <p>Stored locally on this device under <code style="font:11px ui-monospace, monospace;">com.aicoursebuilder.provider-keys.anthropic</code>.</p>
+                </div>
+
+                <div class="field">
+                  <label for="apikey-input">API key</label>
+                  <input id="apikey-input" type="password" placeholder="sk-ant-…" autocomplete="off">
+                  <span class="hint">Get a key from console.anthropic.com</span>
+                </div>
+
+                <div class="field">
+                  <label for="baseurl-input">Custom base URL (optional)</label>
+                  <input id="baseurl-input" type="text" placeholder="https://api.anthropic.com">
+                  <span class="hint">Leave empty to use Anthropic directly. /v1/messages is appended automatically.</span>
+                </div>
+
+                <div class="modal-actions">
+                  <button class="button" data-action="apikey-cancel" type="button">Cancel</button>
+                  <button class="button primary" data-action="apikey-save" type="button">Save</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ───────────────── footer legend ───────────────── -->
+    <footer class="footer-legend">
+      <div class="group">
+        <span class="swatch primary">Primary action</span>
+        <span class="swatch warm">Auto-open / recovery</span>
+        <span class="swatch danger">Error path</span>
+        <span class="swatch neutral">Sidebar / dismissal</span>
+      </div>
+      <div class="group">
+        <span>Inert pills (Sessions / AI Tutor / Review / Notes) render greyed — no hover, no tap.</span>
+        <span><kbd>R</kbd> to reset · <kbd>T</kbd> to toggle theme</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // ───────────── state ─────────────
+    const screenLabels = {
+      bootstrap: { num: '00', label: 'Bootstrap' },
+      goalIntake: { num: '01', label: 'Goal Intake' },
+      planningOutline: { num: '02a', label: 'Planning · Outline' },
+      planningFull: { num: '02b', label: 'Planning · Full' },
+      programPreview: { num: '03', label: 'Program Preview' },
+      planningError: { num: '04', label: 'Planning Error' },
+      home: { num: '05', label: 'Home Dashboard' },
+      programMap: { num: '06', label: 'Program Map' },
+      sessionWorkspace: { num: '07', label: 'Session Workspace' },
+      apiKey: { num: '08', label: 'API Key Sheet (modal)' }
+    };
+
+    const state = {
+      screen: 'bootstrap',
+      returnTo: 'home',
+      planningMode: 'outline',
+      errorKind: 'generic', // or 'missingAPIKey'
+      bootstrapBranch: 'firstLaunch',
+      apiKeyOpen: false,
+      apiKeyOpener: null
+    };
+
+    // ───────────── edge model (graph) ─────────────
+    // Style: 'primary' = happy path, 'warm' = recovery / auto-open, 'danger' = error path, 'neutral' = sidebar / dismissal
+    // Curve: signed offset for the control point (px). Positive = bow right.
+    const edges = [
+      { from: 'bootstrap', to: 'goalIntake', style: 'primary', label: 'no goal in DB', curve: -50 },
+      { from: 'bootstrap', to: 'home', style: 'primary', label: 'goal exists', curve: 80 },
+      { from: 'goalIntake', to: 'planningOutline', style: 'primary', label: 'Preview Plan', curve: -30 },
+      { from: 'goalIntake', to: 'planningFull', style: 'primary', label: 'Start Learning', curve: 60 },
+      { from: 'goalIntake', to: 'apiKey', style: 'warm', label: 'gear icon', curve: 90 },
+      { from: 'planningOutline', to: 'programPreview', style: 'primary', label: 'outline succeeded', curve: -30 },
+      { from: 'planningOutline', to: 'planningError', style: 'danger', label: 'outline failed', curve: 70 },
+      { from: 'planningFull', to: 'home', style: 'primary', label: 'blueprint succeeded', curve: -50 },
+      { from: 'planningFull', to: 'planningError', style: 'danger', label: 'blueprint failed', curve: -10 },
+      { from: 'programPreview', to: 'planningFull', style: 'primary', label: 'Start Learning (confirm)', curve: -50 },
+      { from: 'programPreview', to: 'goalIntake', style: 'neutral', label: 'Refine Goal', curve: -110 },
+      { from: 'planningError', to: 'planningOutline', style: 'warm', label: 'Try Again (outline)', curve: 110 },
+      { from: 'planningError', to: 'planningFull', style: 'warm', label: 'Try Again (full)', curve: 50 },
+      { from: 'planningError', to: 'apiKey', style: 'warm', label: 'Add Key', curve: -60 },
+      { from: 'planningError', to: 'home', style: 'neutral', label: 'Use Demo Program', curve: 40 },
+      { from: 'apiKey', to: 'planningError', style: 'neutral', label: 'Save / Cancel ↩', curve: 30 },
+      { from: 'apiKey', to: 'goalIntake', style: 'neutral', label: 'Save / Cancel ↩', curve: -90 },
+      { from: 'home', to: 'programMap', style: 'neutral', label: 'sidebar pill', curve: 0 },
+      { from: 'programMap', to: 'home', style: 'neutral', label: 'sidebar pill', curve: 30 },
+      { from: 'home', to: 'sessionWorkspace', style: 'primary', label: 'Resume / card', curve: -60 },
+      { from: 'programMap', to: 'sessionWorkspace', style: 'primary', label: 'stage row tapped', curve: 60 },
+      { from: 'home', to: 'goalIntake', style: 'warm', label: 'Reset', curve: -130 },
+      { from: 'sessionWorkspace', to: 'home', style: 'neutral', label: 'Done (returnTo)', curve: -40 },
+      { from: 'sessionWorkspace', to: 'programMap', style: 'neutral', label: 'Done (returnTo)', curve: 60 }
+    ];
+
+    // ───────────── render: graph edges ─────────────
+    const graphEl = document.getElementById('graph');
+    const svgEl = document.getElementById('edges');
+
+    function nodeCenter(name) {
+      const btn = graphEl.querySelector(`[data-node="${name}"]`);
+      if (!btn) return null;
+      const pr = graphEl.getBoundingClientRect();
+      const r = btn.getBoundingClientRect();
+      return {
+        cx: r.left - pr.left + r.width / 2,
+        cy: r.top - pr.top + r.height / 2,
+        top: r.top - pr.top,
+        bottom: r.top - pr.top + r.height,
+        width: r.width,
+        height: r.height
+      };
+    }
+
+    function drawEdges() {
+      // size svg
+      const r = graphEl.getBoundingClientRect();
+      svgEl.setAttribute('width', r.width);
+      svgEl.setAttribute('height', r.height);
+      svgEl.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`);
+
+      // clear (keep <defs>)
+      while (svgEl.lastChild && svgEl.lastChild.tagName !== 'defs') {
+        svgEl.removeChild(svgEl.lastChild);
+      }
+
+      edges.forEach((edge, i) => {
+        const a = nodeCenter(edge.from);
+        const b = nodeCenter(edge.to);
+        if (!a || !b) return;
+
+        // start at bottom-edge of source (or top, if going up)
+        const goingUp = b.cy < a.cy;
+        const sx = a.cx;
+        const sy = goingUp ? a.top : a.bottom;
+        const tx = b.cx;
+        const ty = goingUp ? b.bottom : b.top;
+
+        // control point with curve offset; bow horizontally between rows
+        const mx = (sx + tx) / 2 + (edge.curve || 0);
+        const my = (sy + ty) / 2;
+        const d = `M ${sx} ${sy} Q ${mx} ${my} ${tx} ${ty}`;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('class', `edge ${edge.style}`);
+        path.setAttribute('data-from', edge.from);
+        path.setAttribute('data-to', edge.to);
+        path.setAttribute('data-style', edge.style);
+
+        // arrowhead marker
+        const markerId = `ah-${edge.style === 'neutral' ? 'neutral' : edge.style}`;
+        path.setAttribute('marker-end', `url(#${markerId})`);
+        // make arrowhead inherit the right color via currentColor on primary
+        if (edge.style === 'primary') path.style.color = 'var(--accent)';
+
+        svgEl.appendChild(path);
+      });
+
+      highlightActiveEdges();
+    }
+
+    // ───────────── render: nodes + screen ─────────────
+    function setActiveNode() {
+      graphEl.querySelectorAll('.node').forEach(n => {
+        n.classList.toggle('active', n.dataset.node === state.screen);
+      });
+      const labelEl = document.getElementById('crumb-label');
+      const numEl = document.getElementById('crumb-num');
+      const meta = screenLabels[state.screen];
+      if (meta) {
+        labelEl.textContent = meta.label;
+        numEl.textContent = meta.num;
+      }
+    }
+
+    function highlightActiveEdges() {
+      // dim edges not connected to the active node, highlight those that are
+      svgEl.querySelectorAll('path.edge').forEach(p => {
+        p.classList.remove('dim', 'active');
+        const isCurrent = p.dataset.from === state.screen || p.dataset.to === state.screen;
+        if (!isCurrent) p.classList.add('dim');
+      });
+    }
+
+    function setScreen(name) {
+      // skip if name is apiKey — we treat it as modal overlay above the previous screen
+      if (name === 'apiKey') {
+        openApiKeySheet(state.screen === 'apiKey' ? state.apiKeyOpener : state.screen);
+        return;
+      }
+      state.screen = name;
+      document.querySelectorAll('[data-screen]').forEach(el => {
+        el.classList.toggle('active', el.dataset.screen === name);
+      });
+
+      // per-screen toggles in canvas-header
+      const actions = document.getElementById('canvas-actions');
+      actions.innerHTML = '';
+      if (name === 'planningOutline' || name === 'planningFull') {
+        const wrap = document.createElement('div');
+        wrap.className = 'mode-toggle';
+        wrap.innerHTML = `
+          <button data-mode="outline" class="${state.planningMode === 'outline' ? 'on' : ''}">Outline</button>
+          <button data-mode="full" class="${state.planningMode === 'full' ? 'on' : ''}">Full blueprint</button>
+        `;
+        wrap.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            state.planningMode = btn.dataset.mode;
+            setScreen(state.planningMode === 'outline' ? 'planningOutline' : 'planningFull');
+          });
+        });
+        actions.appendChild(wrap);
+      } else if (name === 'planningError') {
+        const wrap = document.createElement('div');
+        wrap.className = 'mode-toggle';
+        wrap.innerHTML = `
+          <button data-kind="generic" class="${state.errorKind === 'generic' ? 'on' : ''}">Generic error</button>
+          <button data-kind="missingAPIKey" class="${state.errorKind === 'missingAPIKey' ? 'on' : ''}">Missing API key</button>
+        `;
+        wrap.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            state.errorKind = btn.dataset.kind;
+            paintErrorScreen();
+            // re-render this header to flip the active toggle
+            setScreen('planningError');
+          });
+        });
+        actions.appendChild(wrap);
+      } else if (name === 'home' || name === 'programMap') {
+        // breadcrumb hint about the active route
+        const tag = document.createElement('span');
+        tag.className = 'chip';
+        tag.style.fontSize = '11px';
+        tag.textContent = `Route: ${name === 'home' ? 'Home' : 'Program Map'}`;
+        actions.appendChild(tag);
+      }
+
+      paintErrorScreen();
+      setActiveNode();
+      highlightActiveEdges();
+      // scroll the stage to top
+      const stageScroll = document.getElementById('stage-scroll');
+      if (stageScroll) stageScroll.scrollTop = 0;
+    }
+
+    function paintErrorScreen() {
+      const title = document.getElementById('error-title');
+      const body = document.getElementById('error-body');
+      const actions = document.getElementById('error-actions');
+      const hint = document.getElementById('error-hint');
+      if (!title) return;
+      if (state.errorKind === 'missingAPIKey') {
+        title.textContent = "We need an API key first";
+        body.textContent = "Add your Anthropic API key so PlanningEngine can call Claude. We'll auto-retry the pending call after Save.";
+        hint.style.display = 'inline-flex';
+        actions.innerHTML = `
+          <button class="button warm" data-action="error-add-key" type="button">Add Key</button>
+          <button class="button" data-action="error-demo" type="button">Use Demo Program</button>
+        `;
+      } else {
+        title.textContent = "Couldn't generate your program";
+        body.textContent = "The model returned an error. You can try again, fall back to a demo program, or come back to this in a moment.";
+        hint.style.display = 'none';
+        actions.innerHTML = `
+          <button class="button primary" data-action="error-retry" type="button">Try Again</button>
+          <button class="button" data-action="error-demo" type="button">Use Demo Program</button>
+        `;
+      }
+    }
+
+    // ───────────── api key sheet (modal) ─────────────
+    const apiBackdrop = document.getElementById('apikey-backdrop');
+
+    function openApiKeySheet(opener) {
+      state.apiKeyOpen = true;
+      state.apiKeyOpener = opener;
+      apiBackdrop.classList.add('open');
+      // visually "active" node = api key
+      graphEl.querySelectorAll('.node').forEach(n => {
+        n.classList.toggle('active', n.dataset.node === 'apiKey');
+      });
+      const meta = screenLabels.apiKey;
+      document.getElementById('crumb-label').textContent = meta.label;
+      document.getElementById('crumb-num').textContent = meta.num;
+      // edges: spotlight from opener and from api key
+      svgEl.querySelectorAll('path.edge').forEach(p => {
+        p.classList.remove('dim', 'active');
+        const touchesKey = p.dataset.from === 'apiKey' || p.dataset.to === 'apiKey';
+        if (!touchesKey) p.classList.add('dim');
+      });
+    }
+
+    function closeApiKeySheet({ retry = false } = {}) {
+      state.apiKeyOpen = false;
+      apiBackdrop.classList.remove('open');
+      const opener = state.apiKeyOpener || 'goalIntake';
+      state.apiKeyOpener = null;
+
+      if (retry && opener === 'planningError') {
+        // mimic: Save with missingAPIKey error pending → re-runs the prior planning call
+        setScreen(state.planningMode === 'outline' ? 'planningOutline' : 'planningFull');
+        return;
+      }
+      setScreen(opener === 'apiKey' ? 'goalIntake' : opener);
+    }
+
+    // ───────────── action handlers ─────────────
+    document.addEventListener('click', (event) => {
+      const action = event.target.closest('[data-action]')?.dataset.action;
+      const node = event.target.closest('[data-node]')?.dataset.node;
+
+      if (node) {
+        // graph click: jump
+        setScreen(node);
+        return;
+      }
+
+      if (!action) return;
+
+      switch (action) {
+        // bootstrap
+        case 'boot-first-launch':
+          state.bootstrapBranch = 'firstLaunch';
+          setScreen('goalIntake');
+          break;
+        case 'boot-returning':
+          state.bootstrapBranch = 'returning';
+          state.returnTo = 'home';
+          setScreen('home');
+          break;
+
+        // goal intake
+        case 'goal-preview':
+          state.planningMode = 'outline';
+          setScreen('planningOutline');
+          break;
+        case 'goal-start':
+          state.planningMode = 'full';
+          setScreen('planningFull');
+          break;
+        case 'open-api-key':
+          openApiKeySheet('goalIntake');
+          break;
+
+        // planning progress
+        case 'outline-success':
+          setScreen('programPreview');
+          break;
+        case 'outline-fail':
+          state.errorKind = 'generic';
+          state.planningMode = 'outline';
+          setScreen('planningError');
+          break;
+        case 'full-success':
+          state.returnTo = 'home';
+          setScreen('home');
+          break;
+        case 'full-fail':
+          state.errorKind = 'generic';
+          state.planningMode = 'full';
+          setScreen('planningError');
+          break;
+
+        // preview
+        case 'preview-confirm':
+          state.planningMode = 'full';
+          setScreen('planningFull');
+          break;
+        case 'preview-refine':
+          setScreen('goalIntake');
+          break;
+
+        // error
+        case 'error-retry':
+          setScreen(state.planningMode === 'outline' ? 'planningOutline' : 'planningFull');
+          break;
+        case 'error-add-key':
+          openApiKeySheet('planningError');
+          break;
+        case 'error-demo':
+          state.returnTo = 'home';
+          setScreen('home');
+          break;
+
+        // home
+        case 'home-resume':
+          state.returnTo = 'home';
+          setScreen('sessionWorkspace');
+          break;
+        case 'home-reset':
+          // mimics deleteGoal → resetTapped → goalIntake
+          setScreen('goalIntake');
+          break;
+
+        // program map
+        case 'map-session':
+          state.returnTo = 'programMap';
+          setScreen('sessionWorkspace');
+          break;
+
+        // sidebar route taps
+        case 'route-home':
+          setScreen('home');
+          break;
+        case 'route-programMap':
+          setScreen('programMap');
+          break;
+
+        // session workspace
+        case 'ws-back':
+          setScreen(state.returnTo || 'home');
+          break;
+        case 'ws-done':
+          setScreen(state.returnTo || 'home');
+          break;
+
+        // api key sheet
+        case 'apikey-cancel':
+          closeApiKeySheet({ retry: false });
+          break;
+        case 'apikey-save':
+          // if opener was planningError + missingAPIKey, retry the pending op
+          closeApiKeySheet({ retry: state.errorKind === 'missingAPIKey' });
+          // any subsequent error kind defaults back to generic so the toggle isn't sticky
+          if (state.errorKind === 'missingAPIKey') state.errorKind = 'generic';
+          break;
+      }
+    });
+
+    // ───────────── hover highlighting ─────────────
+    graphEl.addEventListener('mouseover', (e) => {
+      const btn = e.target.closest('.node');
+      if (!btn) return;
+      const name = btn.dataset.node;
+      svgEl.querySelectorAll('path.edge').forEach(p => {
+        p.classList.remove('dim', 'active');
+        const touches = p.dataset.from === name || p.dataset.to === name;
+        if (touches) {
+          p.classList.add('active');
+        } else {
+          p.classList.add('dim');
+        }
+      });
+    });
+
+    graphEl.addEventListener('mouseleave', () => {
+      highlightActiveEdges();
+    });
+
+    // ───────────── theme toggle ─────────────
+    const themeBtn = document.getElementById('theme-toggle');
+    function applyThemeButtonLabel() {
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      themeBtn.textContent = dark ? 'Switch to Light' : 'Switch to Dark';
+    }
+    themeBtn.addEventListener('click', () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      applyThemeButtonLabel();
+      // re-stroke edges so currentColor fills the right tone
+      requestAnimationFrame(drawEdges);
+    });
+
+    // ───────────── reset to first launch ─────────────
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      state.screen = 'bootstrap';
+      state.returnTo = 'home';
+      state.planningMode = 'outline';
+      state.errorKind = 'generic';
+      state.bootstrapBranch = 'firstLaunch';
+      if (state.apiKeyOpen) closeApiKeySheet({ retry: false });
+      setScreen('bootstrap');
+    });
+
+    // ───────────── keyboard shortcuts ─────────────
+    document.addEventListener('keydown', (e) => {
+      if (e.target.matches('input, textarea')) return;
+      if (e.key === 'r' || e.key === 'R') {
+        document.getElementById('reset-btn').click();
+      } else if (e.key === 't' || e.key === 'T') {
+        themeBtn.click();
+      } else if (e.key === 'Escape' && state.apiKeyOpen) {
+        closeApiKeySheet({ retry: false });
+      }
+    });
+
+    // ───────────── boot ─────────────
+    function init() {
+      applyThemeButtonLabel();
+      setScreen('bootstrap');
+      // wait for layout, then draw edges
+      requestAnimationFrame(() => requestAnimationFrame(drawEdges));
+    }
+
+    window.addEventListener('resize', () => {
+      requestAnimationFrame(drawEdges);
+    });
+
+    // observe rail body scroll → edges follow positions
+    document.querySelector('.rail-body')?.addEventListener('scroll', () => {
+      requestAnimationFrame(drawEdges);
+    });
+
+    init();
+  </script>
+</body>
+</html>
