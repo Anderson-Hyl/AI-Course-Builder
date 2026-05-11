@@ -7,10 +7,11 @@ import LearningRepository
 import LearningUI
 import PlanningEngine
 
-/// Top-level coordinator. Owns the bootstrap path (ensure a `LearnerProfile`
-/// exists, fetch any active `LearningGoal`, install or recover the demo
-/// program) and the root navigation state. Routes between Goal Intake,
-/// the Home Dashboard, and the Session Workspace destination.
+/// Top-level coordinator for the App Structure v2 surfaces. Owns the
+/// bootstrap path (ensure a `LearnerProfile` exists, fetch every
+/// `LearningGoal`) and routes the user between Library, the New Course
+/// modal, Course Home, and the pushed Session Workspace destination via
+/// the `AppScope` enum.
 @Reducer
 public struct AppFeature {
     @Reducer
@@ -46,12 +47,8 @@ public struct AppFeature {
         public var currentGoal: LearningGoal?
         public var currentProgram: ProgramBlueprint?
         public var goalIntake: GoalIntakeFeature.State = .init()
-        public var home: HomeFeature.State = .init()
-        public var programMap: ProgramMapFeature.State = .init()
-        /// Course Home — the merged Home + Program Map screen in
-        /// App Structure v2. Active when `appScope == .course(_)`.
-        /// Phase 6 retires `home` + `programMap` once nothing else
-        /// reads them.
+        /// Course Home — the merged Map + Today screen. Active when
+        /// `appScope == .course(_)`.
         public var courseHome: CourseHomeFeature.State = .init()
         /// Top-level app surface. Defaults to `.library` after bootstrap.
         /// Renamed to `appScope` (not `scope`) to avoid the collision with
@@ -59,9 +56,6 @@ public struct AppFeature {
         /// ambiguates between the dynamic-member-lookup property and the
         /// store-scoping method.
         public var appScope: AppScope = .library
-        /// In-course sub-route — which sidebar destination shows when
-        /// `scope == .course(_)`. Inert outside a course.
-        public var currentRoute: SidebarRoute = .home
         @Presents public var destination: Destination.State?
 
         /// True while a `PlanningEngine` call is in flight (outline OR
@@ -98,13 +92,7 @@ public struct AppFeature {
         case bootstrapCompleted(profile: LearnerProfile, goals: [LearningGoal])
         case bootstrapFailed(String)
         case goalIntake(GoalIntakeFeature.Action)
-        case home(HomeFeature.Action)
-        case programMap(ProgramMapFeature.Action)
         case courseHome(CourseHomeFeature.Action)
-        /// Sidebar nav fired — swap the visible content area to the
-        /// chosen route. Only `.home` and `.programMap` are handled;
-        /// other routes are inert until their screens land.
-        case routeSelected(SidebarRoute)
         case destination(PresentationAction<Destination.Action>)
         /// Library tile / resume strip tap — enter a specific course.
         case courseSelected(LearningGoal.ID)
@@ -177,12 +165,6 @@ public struct AppFeature {
         Scope(state: \.goalIntake, action: \.goalIntake) {
             GoalIntakeFeature()
         }
-        Scope(state: \.home, action: \.home) {
-            HomeFeature()
-        }
-        Scope(state: \.programMap, action: \.programMap) {
-            ProgramMapFeature()
-        }
         Scope(state: \.courseHome, action: \.courseHome) {
             CourseHomeFeature()
         }
@@ -204,8 +186,7 @@ public struct AppFeature {
                 state.isBootstrapping = false
                 state.profile = profile
                 state.goals = IdentifiedArray(uniqueElements: goals)
-                state.home.profile = profile
-                state.programMap.profile = profile
+                state.courseHome.profile = profile
                 // Seed the form with profile defaults so opening Goal
                 // Intake starts from where the user left off.
                 state.goalIntake.startingLevel = profile.startingLevel
@@ -298,10 +279,6 @@ public struct AppFeature {
                 guard let goal = state.goals[id: id] else { return .none }
                 state.appScope = .course(id)
                 state.currentGoal = goal
-                state.home.profile = state.profile
-                state.home.goal = goal
-                state.programMap.profile = state.profile
-                state.programMap.goal = goal
                 state.courseHome.profile = state.profile
                 state.courseHome.goal = goal
                 if state.pendingOutlineForNewGoal {
@@ -329,12 +306,7 @@ public struct AppFeature {
                 state.appScope = .library
                 state.currentGoal = nil
                 state.currentProgram = nil
-                state.currentRoute = .home
                 state.destination = nil
-                state.home = HomeFeature.State()
-                state.home.profile = state.profile
-                state.programMap = ProgramMapFeature.State()
-                state.programMap.profile = state.profile
                 state.courseHome = CourseHomeFeature.State()
                 state.courseHome.profile = state.profile
                 return .none
@@ -432,17 +404,9 @@ public struct AppFeature {
                 if case .newCourse = state.appScope, let goalID = state.currentGoal?.id {
                     state.appScope = .course(goalID)
                 }
-                state.home.goal = state.currentGoal
-                state.home.program = program
-                state.programMap.goal = state.currentGoal
-                state.programMap.program = program
                 state.courseHome.goal = state.currentGoal
                 state.courseHome.program = program
-                return .merge(
-                    .send(.home(.onAppear(programID: program.id))),
-                    .send(.programMap(.onAppear(programID: program.id))),
-                    .send(.courseHome(.onAppear(programID: program.id)))
-                )
+                return .send(.courseHome(.onAppear(programID: program.id)))
 
             case .planningFailed(let error):
                 state.isPlanning = false
@@ -513,20 +477,12 @@ public struct AppFeature {
 
             case .programLoaded(let program):
                 state.currentProgram = program
-                state.home.goal = state.currentGoal
-                state.home.program = program
-                state.programMap.goal = state.currentGoal
-                state.programMap.program = program
                 state.courseHome.goal = state.currentGoal
                 state.courseHome.program = program
-                return .merge(
-                    .send(.home(.onAppear(programID: program.id))),
-                    .send(.programMap(.onAppear(programID: program.id))),
-                    .send(.courseHome(.onAppear(programID: program.id)))
-                )
+                return .send(.courseHome(.onAppear(programID: program.id)))
 
             case .programLoadFailed(let message):
-                state.home.loadFailure = message
+                state.courseHome.loadFailure = message
                 return .none
 
             case .programCreated:
@@ -537,28 +493,7 @@ public struct AppFeature {
 
             case .sessionsChanged(let programID):
                 guard state.currentProgram?.id == programID else { return .none }
-                return .merge(
-                    .send(.home(.onAppear(programID: programID))),
-                    .send(.programMap(.onAppear(programID: programID))),
-                    .send(.courseHome(.onAppear(programID: programID)))
-                )
-
-            case .home(.delegate(.sessionTapped(let id))):
-                state.destination = .sessionWorkspace(SessionWorkspaceFeature.State(sessionID: id))
-                return .none
-
-            case .home(.delegate(.resetTapped)):
-                return .send(.resetTapped)
-
-            case .home:
-                return .none
-
-            case .programMap(.delegate(.sessionTapped(let id))):
-                state.destination = .sessionWorkspace(SessionWorkspaceFeature.State(sessionID: id))
-                return .none
-
-            case .programMap:
-                return .none
+                return .send(.courseHome(.onAppear(programID: programID)))
 
             case .courseHome(.delegate(.sessionTapped(let id))):
                 state.destination = .sessionWorkspace(SessionWorkspaceFeature.State(sessionID: id))
@@ -568,12 +503,6 @@ public struct AppFeature {
                 return .send(.returnToLibrary)
 
             case .courseHome:
-                return .none
-
-            case .routeSelected(let route):
-                guard route.hasScreen, route != state.currentRoute else { return .none }
-                state.currentRoute = route
-                state.destination = nil
                 return .none
 
             case .destination(.presented(.sessionWorkspace(.delegate(.dismiss)))):
@@ -595,15 +524,10 @@ public struct AppFeature {
                 state.currentProgram = nil
                 state.outlineProposal = nil
                 state.pendingOutlineForNewGoal = false
-                state.home = HomeFeature.State()
-                state.programMap = ProgramMapFeature.State()
                 state.courseHome = CourseHomeFeature.State()
-                state.currentRoute = .home
                 state.destination = nil
                 state.goalIntake = GoalIntakeFeature.State()
                 if let profile = state.profile {
-                    state.home.profile = profile
-                    state.programMap.profile = profile
                     state.courseHome.profile = profile
                     state.goalIntake.startingLevel = profile.startingLevel
                     state.goalIntake.weeklyTimeBudgetHours = profile.weeklyTimeBudgetHours

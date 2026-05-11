@@ -32,7 +32,7 @@ One top-level `.xcworkspace` composing `AICourseBuilder.xcodeproj` (xcodegen-man
   - `AdaptationEngine` — next-step decisions, review insertion, recovery sessions. **Placeholder this pass**.
   - `TutorEngine` — hints, reframings, encouragement. **Placeholder this pass**.
   - `ChatClients` — `ChatClient` abstraction over Anthropic API + Claude Code CLI. **Placeholder this pass** — first Anthropic call ships with `PlanningEngine`'s real implementation.
-  - `AppFeature` — coordinator reducer, navigation, all screen-level views. Currently hosts only Goal Intake + a placeholder Home stub; expands per `ARCHITECTURE.md §11` as features land.
+  - `AppFeature` — coordinator reducer and all screen-level views. Routes by an `AppScope` enum (`.library` / `.newCourse` / `.course(goalID)`) on top of the transient bootstrap / planning / outline gates. Hosts: `LibraryView`, `NewCourseSheetView`, `CourseHomeView`, `SessionWorkspaceView`, `APIKeySheetView`. Plus the legacy `PlanningProgressView` + `PlanningErrorView` + `ProgramPreviewView` for non-modal planning paths.
 
 ## Data model
 
@@ -188,8 +188,9 @@ A full set of Point-Free skills lives at `~/.pfw/skills/`, covering the librarie
 - `PRD.md` — product requirements, target user, MVP scope, success criteria.
 - `ARCHITECTURE.md` — module boundaries, engine contracts, persistence model, MVP implementation order.
 - `AGENTS.md` — coding-agent guidance, product non-goals, content model, learning logic.
-- `design/concept.png` — original Figma-style visual reference for Goal Intake / Home Dashboard / Session Workspace / Program Map.
-- `design/mvp-design-board.html` — higher-fidelity HTML mockup of the same four screens, aligned to `LearningUI/Theme/CourseBuilderThemePalette.swift`. Use this as the *layout* reference; the app renders natively, never via web view.
+- `design/concept.png` — original Figma-style visual reference; superseded by the v2 deliverables below but kept for token / palette history.
+- `design/mvp-design-board.html` — v1 four-screen mockup (Goal Intake / Home Dashboard / Session Workspace / Program Map) aligned to `LearningUI/Theme/CourseBuilderThemePalette.swift`. Useful for token reference; the v1 screens themselves are gone.
+- `design/App Structure _standalone_.html` — the App Structure v2 design (Library → Course → Session, persistent topbar, contextual sidebar, focus-mode Session, modal New Course). This is the **current** source of truth for IA + layout; the running SwiftUI app mirrors its four screens.
 
 CLAUDE.md is the **engineering** bible; the four above are the **product/architecture** bibles. When intent is unclear, those are the source of truth.
 
@@ -197,11 +198,9 @@ CLAUDE.md is the **engineering** bible; the four above are the **product/archite
 
 Carried over from the bootstrap pass:
 
-- **All LLM wiring** (HIGH). `ChatClients` is a placeholder. First real call lands when `PlanningEngine.generateBlueprint(goal:)` is implemented — that's the first end-to-end LLM path.
-- **All engine logic** (HIGH). `PlanningEngine`, `EvaluationEngine`, `AdaptationEngine`, `TutorEngine` are placeholder enums. Each ships in its own pass once the upstream pieces (LLM, eval harness) exist.
-- **`LessonRendering`** (HIGH). Block renderers ship after the first LLM-authored session is persisted end-to-end so we render against real shapes, not speculative ones.
-- **Home Dashboard / Session Workspace / Program Map / Review Vault** (HIGH). Currently only Goal Intake exists; everything else is a placeholder stub showing the persisted goal text.
-- **`UIComponents` design system** (MEDIUM). Bootstrap uses plain SwiftUI; full design system wires in next pass.
+- **AdaptationEngine + TutorEngine** (HIGH). `PlanningEngine` and `EvaluationEngine` ship live; the other two stay placeholders. AdaptationEngine wires after a few sessions worth of attempts exist; TutorEngine wires when the Session Workspace's Tutor slide-over gets a real model behind it (currently a static placeholder).
+- **Review Vault** (MEDIUM). The Course Home rail shows a placeholder "no items yet" card; spaced-repetition queue logic lands when `ReviewItem` is wired through.
+- **`UIComponents` design system** (MEDIUM). The new `LearningUI/Shell` primitives (Shell / Topbar / Sidebar / NavItem) cover the v2 chrome. Wider design-system adoption (deep Theme bindings, motion tokens) lands when the remote UIComponents library is integrated.
 - **Tests** (MEDIUM). Test target stub exists in `Package.swift` but no test bodies. First tests cover `SessionBlock` payload encode/decode + `LearningRepository` round-trips per `ARCHITECTURE.md §13`.
 - **CloudKit sync** (LOW). SQLiteData supports it (see SlideFlow's `Schema.swift` for the wiring); add after the local-first loop is solid.
 - **App icon, brand assets, marketing copy** (LOW). Placeholder accent color only.

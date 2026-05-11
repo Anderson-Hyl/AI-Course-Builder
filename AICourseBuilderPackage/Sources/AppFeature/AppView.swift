@@ -3,17 +3,18 @@ import LearningModels
 import LearningUI
 import SwiftUI
 
-/// Root view. Dispatches by `AppFeature.Scope`:
-/// `.library` → `LibraryView` (the new home screen, App Structure v2).
-/// `.newCourse` → Goal Intake form wrapped in a minimal back-out chrome.
-/// `.course(_)` → legacy `SidebarShell` hosting Home / Program Map / the
-///                pushed SessionWorkspace. Phase 4 collapses this branch
-///                onto the new `Shell` + `CourseSidebar` and a single
-///                `CourseHomeView`.
+/// Root view. Dispatches by `AppFeature.AppScope`:
+/// `.library` → `LibraryView`, the home screen.
+/// `.newCourse` → `NewCourseSheetView`, the draft-then-refine modal.
+/// `.course(_)` → `CourseHomeView` hosting the program timeline + Today
+///                rail, with `SessionWorkspaceView` pushed on top of it
+///                via the NavigationStack when the user opens a session.
 ///
 /// The transient surfaces (bootstrap spinner, planning progress, planning
 /// error, outline preview) still gate ahead of the scope switch because
-/// they're orthogonal to whichever scope the user is in.
+/// they're orthogonal to whichever scope the user is in — except for
+/// `.newCourse`, which absorbs all four inline so the modal stays open
+/// across the createGoal → outline → confirm cycle.
 public struct AppView: View {
     @Bindable var store: StoreOf<AppFeature>
 
