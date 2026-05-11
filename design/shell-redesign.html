@@ -1,0 +1,2805 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Course Builder · Persistent Shell Redesign</title>
+  <style>
+    :root {
+      color-scheme: light;
+
+      --app-canvas: #F7F3EE;
+      --page: #FFFCF8;
+      --sidebar: #102A4A;
+      --sidebar-active: #1A3A63;
+      --card: #FFFEFC;
+      --card-muted: #F5F8FC;
+      --input: #FBFCFE;
+      --code-block: #112746;
+      --note-block: #EEF4FB;
+      --accent-tint: #EDF3FF;
+      --success-tint: #EAF7F2;
+      --warm-tint: #FFF4E6;
+
+      --text-primary: #1A2E47;
+      --text-secondary: #607086;
+      --text-tertiary: #8D99AA;
+      --text-inverse: #FFFFFF;
+      --text-sidebar: #F8FBFF;
+      --text-sidebar-secondary: #AFC0D9;
+      --text-sidebar-tertiary: #7A8EAD;
+      --link: #2B61D4;
+
+      --accent: #295FD3;
+      --accent-pressed: #1C4CAF;
+      --accent-soft: #EAF2FF;
+      --teal: #4BA591;
+      --teal-soft: #E7F6F1;
+      --warm: #F0B15B;
+      --warm-soft: #FFF3E1;
+
+      --success: #45B57E;
+      --success-soft: #E9F7F0;
+      --warning: #E4A04D;
+      --warning-soft: #FFF4E4;
+      --danger: #D96C64;
+      --danger-soft: #FCEBE8;
+      --locked: #A6B2C2;
+      --progress-track: #DCE6F3;
+      --progress-current: #7B98D9;
+      --progress-complete: #45B57E;
+
+      --border-subtle: #EEF2F7;
+      --border: #DCE4EF;
+      --border-strong: #C5D2E2;
+      --border-accent: #AFC6F5;
+
+      --hover: rgba(16, 42, 74, 0.04);
+      --pressed: rgba(16, 42, 74, 0.08);
+      --selected: rgba(41, 95, 211, 0.10);
+      --scrim: rgba(16, 42, 74, 0.12);
+      --sidebar-scrim: rgba(255, 255, 255, 0.08);
+
+      --glow-warm: rgba(244, 220, 200, 0.48);
+      --glow-blue: rgba(220, 231, 251, 0.52);
+      --glow-lavender: rgba(236, 228, 250, 0.42);
+      --shadow-card: 0 24px 60px rgba(16, 42, 74, 0.08);
+      --shadow-float: 0 24px 80px rgba(16, 42, 74, 0.14);
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+
+      --app-canvas: #0C131D;
+      --page: #111B27;
+      --sidebar: #0A1830;
+      --sidebar-active: #153154;
+      --card: #172334;
+      --card-muted: #132031;
+      --input: #0E1C2E;
+      --code-block: #081424;
+      --note-block: #102238;
+      --accent-tint: #12294A;
+      --success-tint: #112721;
+      --warm-tint: #2A1E10;
+
+      --text-primary: #EDF4FF;
+      --text-secondary: #A7B5C9;
+      --text-tertiary: #7E90A8;
+      --text-inverse: #FFFFFF;
+      --text-sidebar: #F2F7FF;
+      --text-sidebar-secondary: #91A8C8;
+      --text-sidebar-tertiary: #66789A;
+      --link: #7FA6FF;
+
+      --accent: #74A0FF;
+      --accent-pressed: #5E8AEE;
+      --accent-soft: #153154;
+      --teal: #63CBB2;
+      --teal-soft: #122C25;
+      --warm: #F5C47E;
+      --warm-soft: #312311;
+
+      --success: #69D7A3;
+      --success-soft: #10261F;
+      --warning: #F0BF78;
+      --warning-soft: #2F2414;
+      --danger: #EF8F88;
+      --danger-soft: #331A18;
+      --locked: #6D809A;
+      --progress-track: #24384F;
+      --progress-current: #9BB8FF;
+      --progress-complete: #69D7A3;
+
+      --border-subtle: #1A293C;
+      --border: #24364B;
+      --border-strong: #31465F;
+      --border-accent: #4B6FB7;
+
+      --hover: rgba(255, 255, 255, 0.04);
+      --pressed: rgba(255, 255, 255, 0.08);
+      --selected: rgba(116, 160, 255, 0.10);
+      --scrim: rgba(0, 0, 0, 0.12);
+      --sidebar-scrim: rgba(255, 255, 255, 0.08);
+
+      --glow-warm: rgba(90, 59, 40, 0.48);
+      --glow-blue: rgba(36, 66, 110, 0.52);
+      --glow-lavender: rgba(51, 43, 88, 0.42);
+      --shadow-card: 0 24px 60px rgba(0, 0, 0, 0.26);
+      --shadow-float: 0 24px 80px rgba(0, 0, 0, 0.34);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 18% 10%, var(--glow-warm), transparent 22%),
+        radial-gradient(circle at 76% 16%, var(--glow-blue), transparent 26%),
+        linear-gradient(180deg, var(--app-canvas), color-mix(in srgb, var(--app-canvas) 75%, black 4%));
+      color: var(--text-primary);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body { padding: 28px; }
+
+    .page { max-width: 1760px; margin: 0 auto; }
+
+    /* ---------- Hero ---------- */
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    .hero-copy h1 {
+      margin: 0 0 12px;
+      font-size: clamp(34px, 4vw, 58px);
+      line-height: 0.96;
+      letter-spacing: -0.04em;
+      font-weight: 760;
+      max-width: 720px;
+    }
+
+    .hero-copy p {
+      margin: 0;
+      max-width: 760px;
+      font-size: 16px;
+      line-height: 1.65;
+      color: var(--text-secondary);
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 720;
+      letter-spacing: -0.025em;
+      color: var(--text-primary);
+      margin-bottom: 14px;
+    }
+
+    .brand-mark {
+      width: 26px;
+      height: 26px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 22%, white 78%), var(--accent-soft));
+      color: var(--accent);
+      font-size: 15px;
+      font-weight: 800;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+    }
+
+    /* ---------- Atoms ---------- */
+
+    .chip,
+    .button,
+    .nav-pill,
+    .tiny-pill {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--card) 84%, transparent);
+      color: var(--text-primary);
+      font: inherit;
+    }
+
+    .chip {
+      padding: 11px 14px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(14px);
+    }
+
+    .button {
+      padding: 10px 16px;
+      font-size: 13.5px;
+      font-weight: 650;
+      cursor: pointer;
+      transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .button:hover { transform: translateY(-1px); }
+
+    .button.primary {
+      border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+      background: linear-gradient(180deg, var(--accent), var(--accent-pressed));
+      color: var(--text-inverse);
+      box-shadow: 0 16px 30px color-mix(in srgb, var(--accent) 22%, transparent);
+    }
+
+    .button.secondary { background: color-mix(in srgb, var(--card) 90%, transparent); }
+
+    .button.ghost {
+      background: transparent;
+      border-color: transparent;
+      color: var(--text-secondary);
+    }
+
+    .button.ghost:hover { background: var(--hover); border-color: var(--border-subtle); }
+
+    .button.compact { padding: 7px 12px; font-size: 12.5px; }
+
+    .muted { color: var(--text-secondary); }
+    .tiny { font-size: 12px; color: var(--text-tertiary); }
+
+    /* ---------- Mental-model strip ---------- */
+
+    .model-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .model-card {
+      padding: 20px 22px;
+      border-radius: 22px;
+      background: color-mix(in srgb, var(--card) 92%, transparent);
+      border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(18px);
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .model-card .model-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      color: var(--text-tertiary);
+      font-weight: 700;
+    }
+
+    .model-card h3 {
+      margin: 2px 0 4px;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .model-card p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .model-mini {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: 32px 1fr 38px;
+      gap: 6px;
+      height: 72px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .model-mini > div {
+      display: grid;
+      place-items: center;
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+    }
+
+    .model-mini .mm-side {
+      background: linear-gradient(180deg, var(--sidebar), color-mix(in srgb, var(--sidebar) 80%, black 20%));
+      color: var(--text-sidebar-secondary);
+    }
+
+    .model-mini .mm-stage { background: var(--page); }
+
+    .model-mini .mm-rail {
+      background: color-mix(in srgb, var(--page) 86%, var(--card-muted) 14%);
+      color: var(--text-tertiary);
+    }
+
+    /* ---------- Artboard frame ---------- */
+
+    .artboard {
+      background: color-mix(in srgb, var(--page) 92%, transparent);
+      border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+      border-radius: 28px;
+      padding: 18px;
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(18px);
+      margin-bottom: 28px;
+    }
+
+    .artboard-shell {
+      background: var(--page);
+      border: 1px solid var(--border-subtle);
+      border-radius: 22px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .artboard-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 16px;
+      margin-top: 14px;
+      padding: 0 6px 2px;
+    }
+
+    .artboard-label strong { font-size: 15px; }
+
+    .artboard-label span {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .artboard-note {
+      margin-top: 10px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: var(--note-block);
+      border: 1px solid color-mix(in srgb, var(--accent) 14%, transparent);
+      color: var(--text-secondary);
+      font-size: 12.5px;
+      line-height: 1.55;
+    }
+
+    .artboard-note strong {
+      color: var(--text-primary);
+      font-weight: 650;
+    }
+
+    /* ---------- Persistent shell layout ---------- */
+
+    .shell {
+      display: grid;
+      grid-template-columns: 232px minmax(0, 1fr) 264px;
+      min-height: 760px;
+    }
+
+    .shell.no-rail {
+      grid-template-columns: 232px minmax(0, 1fr);
+    }
+
+    /* ---------- App sidebar (left) ---------- */
+
+    .app-sidebar {
+      background: linear-gradient(180deg, var(--sidebar), color-mix(in srgb, var(--sidebar) 80%, black 20%));
+      color: var(--text-sidebar);
+      display: flex;
+      flex-direction: column;
+      padding: 16px 12px 14px;
+      gap: 14px;
+      border-right: 1px solid color-mix(in srgb, var(--sidebar) 50%, black 50%);
+    }
+
+    .app-sidebar .brand {
+      color: var(--text-sidebar);
+      font-size: 15px;
+      margin: 0 6px 4px;
+    }
+
+    .app-sidebar .brand-mark {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-sidebar);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+
+    .sb-search {
+      margin: 0 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--text-sidebar-secondary);
+      font-size: 12.5px;
+    }
+
+    .sb-search-icon {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      border: 1.5px solid currentColor;
+      position: relative;
+      flex: none;
+      opacity: 0.65;
+    }
+
+    .sb-search-icon::after {
+      content: "";
+      position: absolute;
+      right: -3px;
+      bottom: -3px;
+      width: 6px;
+      height: 1.5px;
+      background: currentColor;
+      transform: rotate(45deg);
+      border-radius: 999px;
+    }
+
+    .sb-section {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .sb-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px 4px;
+      font-size: 10.5px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-sidebar-tertiary);
+      font-weight: 700;
+    }
+
+    .sb-section-add {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text-sidebar-secondary);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .sb-row {
+      display: grid;
+      grid-template-columns: 22px 1fr auto;
+      gap: 9px;
+      align-items: center;
+      padding: 7px 8px;
+      border-radius: 9px;
+      color: var(--text-sidebar-secondary);
+      font-size: 13px;
+      cursor: default;
+      border: 1px solid transparent;
+    }
+
+    .sb-row:hover { background: rgba(255, 255, 255, 0.04); }
+
+    .sb-row.active {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+      color: var(--text-sidebar);
+      border-color: rgba(255, 255, 255, 0.07);
+      box-shadow: inset 0 0 0 1px var(--sidebar-scrim);
+    }
+
+    .sb-row.active .sb-icon { color: var(--text-sidebar); background: rgba(255, 255, 255, 0.12); }
+
+    .sb-row.muted { color: var(--text-sidebar-tertiary); }
+
+    .sb-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-sidebar-secondary);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .sb-icon.lambda {
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 32%, var(--sidebar)), color-mix(in srgb, var(--accent) 18%, var(--sidebar)));
+      color: var(--text-sidebar);
+      font-size: 13px;
+    }
+
+    .sb-icon.warm {
+      background: linear-gradient(180deg, color-mix(in srgb, var(--warm) 36%, var(--sidebar)), color-mix(in srgb, var(--warm) 20%, var(--sidebar)));
+      color: var(--text-sidebar);
+    }
+
+    .sb-icon.teal {
+      background: linear-gradient(180deg, color-mix(in srgb, var(--teal) 36%, var(--sidebar)), color-mix(in srgb, var(--teal) 20%, var(--sidebar)));
+      color: var(--text-sidebar);
+    }
+
+    .sb-trail {
+      font-size: 10.5px;
+      color: var(--text-sidebar-tertiary);
+      letter-spacing: 0.02em;
+    }
+
+    .sb-row .sb-trail.dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+    }
+
+    .sb-spacer { flex: 1 1 auto; min-height: 8px; }
+
+    .sb-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.06);
+      margin: 4px 6px;
+    }
+
+    .sb-tutor-status {
+      display: grid;
+      grid-template-columns: 20px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-sidebar-secondary);
+      font-size: 12px;
+    }
+
+    .sb-tutor-status .dot-live {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--success);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 30%, transparent);
+      margin-left: 6px;
+    }
+
+    .sb-user {
+      display: grid;
+      grid-template-columns: 26px 1fr 18px;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-sidebar);
+    }
+
+    .sb-user-name { font-size: 12.5px; font-weight: 650; }
+    .sb-user-meta { font-size: 10.5px; color: var(--text-sidebar-secondary); }
+
+    .sb-user .avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #DDE6F4, #B5C7E1);
+    }
+
+    .sb-gear {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      color: var(--text-sidebar-tertiary);
+      font-size: 12px;
+    }
+
+    /* ---------- Stage column (center) ---------- */
+
+    .stage {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: var(--page);
+    }
+
+    /* DocHead — toolbar at the top of the stage column. Replaces the
+       per-screen header on every previous artboard so location and
+       primary actions live in one consistent spot. */
+    .dochead {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 54px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: color-mix(in srgb, var(--page) 92%, var(--card-muted) 8%);
+      position: relative;
+    }
+
+    .dh-back {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: var(--text-tertiary);
+      font-size: 14px;
+      flex: none;
+    }
+
+    .dh-back:hover { background: var(--hover); color: var(--text-primary); }
+
+    .dh-title-stack {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .dh-title {
+      font-size: 13.5px;
+      font-weight: 650;
+      letter-spacing: -0.005em;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .dh-meta {
+      font-size: 11.5px;
+      color: var(--text-tertiary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dh-crumb {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 8px;
+      font-size: 11.5px;
+      color: var(--text-tertiary);
+      flex-wrap: wrap;
+    }
+
+    .dh-crumb .crumb {
+      color: var(--text-secondary);
+      cursor: default;
+      padding: 2px 4px;
+      border-radius: 6px;
+    }
+
+    .dh-crumb .crumb:hover { color: var(--text-primary); background: var(--hover); }
+    .dh-crumb .crumb.current { color: var(--text-primary); font-weight: 650; }
+
+    .dh-crumb .sep { color: var(--text-tertiary); opacity: 0.6; }
+
+    .dh-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: none;
+    }
+
+    .dh-iconbtn {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: default;
+      border: 1px solid transparent;
+    }
+
+    .dh-iconbtn:hover {
+      background: var(--card);
+      border-color: var(--border-subtle);
+      color: var(--text-primary);
+    }
+
+    .seg-group {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--card) 88%, transparent);
+      border-radius: 9px;
+      padding: 2px;
+      gap: 0;
+    }
+
+    .seg-group button,
+    .seg-group .seg {
+      border: 0;
+      background: transparent;
+      color: var(--text-secondary);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 650;
+      padding: 5px 11px;
+      border-radius: 7px;
+      cursor: default;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .seg-group .seg.active {
+      background: var(--card);
+      color: var(--text-primary);
+      box-shadow: 0 1px 3px rgba(16, 42, 74, 0.08), inset 0 0 0 1px var(--border-subtle);
+    }
+
+    .seg-group .seg-divider {
+      width: 1px;
+      height: 16px;
+      background: var(--border-subtle);
+      align-self: center;
+    }
+
+    .dh-vsep {
+      width: 1px;
+      height: 22px;
+      background: var(--border-subtle);
+      margin: 0 4px;
+    }
+
+    .dh-step-trail {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px 4px 6px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+
+    .dh-step-trail .step-dots {
+      display: inline-flex;
+      gap: 3px;
+      align-items: center;
+    }
+
+    .dh-step-trail .step-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--accent) 28%, transparent);
+    }
+
+    .dh-step-trail .step-dot.complete { background: var(--accent); }
+    .dh-step-trail .step-dot.current { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent); }
+
+    /* Stage content — scrollable area below the DocHead. */
+    .stage-content {
+      padding: 20px 24px 28px;
+      overflow: auto;
+    }
+
+    /* ---------- Right rail (context) ---------- */
+
+    .rail {
+      background: color-mix(in srgb, var(--page) 92%, var(--card-muted) 8%);
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .rail-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      height: 54px;
+      border-bottom: 1px solid var(--border-subtle);
+      gap: 8px;
+    }
+
+    .rail-head h5 {
+      margin: 0;
+      font-size: 12.5px;
+      font-weight: 650;
+      color: var(--text-primary);
+      letter-spacing: -0.005em;
+    }
+
+    .rail-head .rail-meta {
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    .rail-body {
+      padding: 16px 14px 18px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      overflow: auto;
+    }
+
+    .rail-card {
+      padding: 14px;
+      border-radius: 14px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      display: grid;
+      gap: 8px;
+    }
+
+    .rail-card h6 {
+      margin: 0;
+      font-size: 13px;
+      letter-spacing: -0.005em;
+    }
+
+    .rail-card p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .rail-card .section-label { margin-bottom: 0; }
+
+    .rail-divider {
+      height: 1px;
+      background: var(--border-subtle);
+      margin: 4px 0;
+    }
+
+    /* ---------- Reused content patterns ---------- */
+
+    .section-label,
+    .input-label {
+      margin-bottom: 8px;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-tertiary);
+      font-weight: 700;
+    }
+
+    .input-block,
+    .option-card,
+    .metric-card,
+    .card,
+    .small-card,
+    .lesson-card,
+    .tutor-card,
+    .stage-card,
+    .goal-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+    }
+
+    .input-block {
+      padding: 18px 18px 20px;
+      margin-bottom: 16px;
+      background: linear-gradient(180deg, var(--input), color-mix(in srgb, var(--input) 84%, var(--card) 16%));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
+    }
+
+    .goal-input {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 54px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1.5px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+      background: color-mix(in srgb, var(--card) 86%, transparent);
+      color: var(--text-primary);
+      font-size: 14.5px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+    }
+
+    .goal-icon,
+    .session-icon,
+    .badge-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      flex: none;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .options-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .time-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .option-card {
+      padding: 12px 14px 14px;
+      min-height: 78px;
+    }
+
+    .option-card.active {
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 88%, var(--card) 12%), var(--card));
+      border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent);
+    }
+
+    .option-card strong,
+    .metric-card strong {
+      display: block;
+      font-size: 13.5px;
+      margin-bottom: 4px;
+    }
+
+    .option-card span,
+    .metric-card span {
+      display: block;
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .metric-card {
+      padding: 12px 14px 14px;
+      background: var(--card-muted);
+    }
+
+    .check-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 14px;
+      margin-bottom: 18px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+    }
+
+    .check-item::before {
+      content: "✓";
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      font-size: 10.5px;
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* ---------- Goal Intake (in shell) ---------- */
+
+    .goal-content {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      gap: 28px;
+      align-items: start;
+    }
+
+    .goal-content h2 {
+      margin: 4px 0 10px;
+      font-size: 40px;
+      line-height: 1;
+      letter-spacing: -0.045em;
+      font-weight: 760;
+      max-width: 480px;
+    }
+
+    .goal-content > .goal-copy > p {
+      margin: 0 0 22px;
+      color: var(--text-secondary);
+      font-size: 14.5px;
+      line-height: 1.65;
+      max-width: 460px;
+    }
+
+    .empty-illustration {
+      position: relative;
+      min-height: 460px;
+      border-radius: 22px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 28% 32%, var(--glow-warm), transparent 58%),
+        radial-gradient(circle at 72% 64%, var(--glow-blue), transparent 60%),
+        var(--card-muted);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .empty-panel {
+      position: absolute;
+      border-radius: 18px;
+      border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+      background: color-mix(in srgb, var(--card) 92%, transparent);
+      box-shadow: var(--shadow-float);
+      backdrop-filter: blur(16px);
+    }
+
+    .empty-panel.note {
+      width: 240px;
+      padding: 16px;
+      right: 38px;
+      top: 56px;
+    }
+
+    .empty-panel.main {
+      left: 56px;
+      right: 32px;
+      bottom: 78px;
+      height: 152px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--sidebar) 84%, white 8%), color-mix(in srgb, var(--sidebar) 96%, black 6%));
+      color: var(--text-inverse);
+      display: flex;
+      align-items: center;
+      padding: 22px 26px;
+      gap: 22px;
+    }
+
+    .empty-panel.main .lambda {
+      font-size: 60px;
+      font-weight: 760;
+      line-height: 1;
+      color: var(--text-inverse);
+    }
+
+    .empty-lines {
+      flex: 1;
+      display: grid;
+      gap: 10px;
+    }
+
+    .empty-line {
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .empty-line.short { width: 44%; }
+    .empty-line.mid { width: 76%; }
+    .empty-line.long { width: 88%; }
+
+    .note-lines { display: grid; gap: 10px; }
+    .note-line {
+      height: 8px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--border) 85%, transparent);
+    }
+    .note-line:nth-child(1) { width: 64%; }
+    .note-line:nth-child(2) { width: 82%; }
+    .note-line:nth-child(3) { width: 54%; }
+    .note-line:nth-child(4) { width: 76%; }
+
+    /* ---------- Home Dashboard (in shell) ---------- */
+
+    .top-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .metric-pill {
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      display: grid;
+      gap: 6px;
+      min-height: 92px;
+    }
+
+    .metric-pill strong {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      font-weight: 650;
+    }
+
+    .metric-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 21px;
+      font-weight: 760;
+      letter-spacing: -0.025em;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .card { padding: 18px; }
+
+    .card-title {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 700;
+    }
+
+    .session-card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+
+    .session-card-title h4 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.05;
+      letter-spacing: -0.035em;
+    }
+
+    .session-card p,
+    .small-card p,
+    .card p {
+      margin: 0;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      font-size: 12.5px;
+    }
+
+    .session-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .progress-row {
+      display: grid;
+      grid-template-columns: repeat(10, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .progress-dot {
+      height: 10px;
+      border-radius: 999px;
+      background: var(--progress-track);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-dot.complete::before,
+    .progress-dot.current::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+    }
+
+    .progress-dot.complete::before { background: var(--progress-complete); }
+    .progress-dot.current::before { background: var(--progress-current); }
+
+    .bottom-cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .small-card {
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      display: grid;
+      gap: 10px;
+      min-height: 142px;
+    }
+
+    .small-card strong { font-size: 14.5px; }
+
+    .status-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: var(--card-muted);
+      color: var(--text-secondary);
+      font-size: 11.5px;
+      width: fit-content;
+    }
+
+    .status-tag::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--locked);
+    }
+
+    .status-tag.success::before { background: var(--success); }
+    .status-tag.warning::before { background: var(--warning); }
+    .status-tag.info::before { background: var(--accent); }
+
+    .milestone-track {
+      height: 8px;
+      border-radius: 999px;
+      background: var(--progress-track);
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .milestone-track span {
+      display: block;
+      width: 72%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--progress-current));
+    }
+
+    /* ---------- Program Map (in shell) ---------- */
+
+    .pm-headline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .pm-headline h3 {
+      margin: 0 0 2px;
+      font-size: 28px;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+    }
+
+    .pm-list-wrap {
+      position: relative;
+    }
+
+    .pm-path {
+      position: absolute;
+      left: 9px;
+      top: 22px;
+      bottom: 76px;
+      width: 2px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--success) 46%, transparent), color-mix(in srgb, var(--locked) 60%, transparent));
+    }
+
+    .pm-list {
+      position: relative;
+      display: grid;
+      gap: 12px;
+      padding-left: 28px;
+    }
+
+    .stage-card,
+    .goal-card {
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--card);
+      position: relative;
+    }
+
+    .stage-card.current {
+      border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent);
+    }
+
+    .stage-card.selected {
+      border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+      box-shadow:
+        inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+        0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
+    }
+
+    .stage-card::before {
+      content: "";
+      position: absolute;
+      left: -24px;
+      top: 22px;
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: var(--locked);
+      border: 3px solid var(--page);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--locked) 25%, transparent);
+    }
+
+    .stage-card.current::before {
+      background: var(--success);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--success) 24%, transparent);
+    }
+
+    .stage-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .stage-head h4 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .stage-head .tiny + h4 { margin-top: 4px; }
+
+    .progress-summary {
+      text-align: right;
+      font-size: 11.5px;
+      color: var(--text-secondary);
+    }
+
+    .progress-summary strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--success);
+      font-size: 11.5px;
+    }
+
+    .session-list {
+      display: grid;
+      gap: 6px;
+    }
+
+    .session-row {
+      display: grid;
+      grid-template-columns: 24px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 32px;
+      font-size: 12.5px;
+      padding: 4px 6px;
+      border-radius: 9px;
+    }
+
+    .session-row:hover { background: var(--hover); }
+    .session-row.selected {
+      background: color-mix(in srgb, var(--accent-soft) 80%, transparent);
+    }
+
+    .session-row .num {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: var(--card-muted);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 10.5px;
+      font-weight: 700;
+    }
+
+    .session-row.complete .num {
+      background: var(--success-soft);
+      color: var(--success);
+      border-color: color-mix(in srgb, var(--success) 25%, transparent);
+    }
+
+    .session-row.current .num {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+    }
+
+    .lock-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 18px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--card) 86%, var(--card-muted) 14%);
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .goal-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 34%, var(--card) 66%), var(--card));
+      margin-top: 14px;
+    }
+
+    /* ---------- Session Workspace (in shell) ---------- */
+
+    .session-stepper {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .step-pill {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--card);
+    }
+
+    .step-pill .step-bar {
+      height: 3px;
+      border-radius: 999px;
+      background: var(--progress-track);
+      margin-bottom: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .step-pill.complete .step-bar { background: var(--progress-complete); }
+    .step-pill.current .step-bar {
+      background: linear-gradient(90deg, var(--accent), var(--progress-current));
+    }
+
+    .step-pill .step-name {
+      font-size: 12.5px;
+      font-weight: 650;
+      color: var(--text-primary);
+    }
+
+    .step-pill .step-sub {
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    .step-pill.complete .step-name { color: var(--text-secondary); }
+    .step-pill.current { border-color: color-mix(in srgb, var(--accent) 36%, var(--border)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent); }
+    .step-pill.locked { background: var(--card-muted); }
+    .step-pill.locked .step-name { color: var(--text-tertiary); }
+
+    .ws-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+
+    .ws-title h3 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1;
+      letter-spacing: -0.045em;
+    }
+
+    .ws-title p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.55;
+      max-width: 720px;
+    }
+
+    .lesson-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .lesson-card { padding: 16px; }
+
+    .code-sample {
+      padding: 13px 16px;
+      border-radius: 13px;
+      background: linear-gradient(180deg, var(--code-block), color-mix(in srgb, var(--code-block) 84%, black 16%));
+      color: rgba(255, 255, 255, 0.92);
+      font: 13.5px/1.55 ui-monospace, "SF Mono", Menlo, monospace;
+      letter-spacing: -0.01em;
+      overflow: hidden;
+    }
+
+    .explain-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .explain-cell {
+      padding: 12px;
+      border-radius: 14px;
+      background: var(--card-muted);
+      border: 1px solid var(--border-subtle);
+      text-align: center;
+    }
+
+    .explain-cell strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .explain-cell span {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .practice-box {
+      padding: 16px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 62%, var(--card) 38%), var(--card));
+      border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+    }
+
+    .practice-box code {
+      display: block;
+      margin: 12px 0 8px;
+      font: 14.5px/1.6 ui-monospace, "SF Mono", Menlo, monospace;
+      color: var(--text-primary);
+    }
+
+    .workspace-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    /* AI tutor inside the rail */
+    .tutor-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .tutor-card h6 { margin: 0; font-size: 13px; }
+
+    .hint-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 11px;
+      border-radius: 11px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      width: fit-content;
+      font-size: 11.5px;
+      font-weight: 650;
+    }
+
+    .notes-box {
+      padding: 12px;
+      border-radius: 12px;
+      background: var(--note-block);
+      border: 1px solid color-mix(in srgb, var(--accent) 10%, transparent);
+      color: var(--text-secondary);
+      font-size: 11.5px;
+      line-height: 1.55;
+    }
+
+    /* Rail: Today / focus on Home */
+    .today-card {
+      padding: 14px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 62%, var(--card) 38%), var(--card));
+      border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+      display: grid;
+      gap: 10px;
+    }
+
+    .today-card h6 { margin: 0; font-size: 14px; letter-spacing: -0.02em; }
+
+    .today-card .meta { font-size: 11px; color: var(--text-secondary); }
+
+    .activity-row {
+      display: grid;
+      grid-template-columns: 22px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+      padding: 6px 0;
+      border-bottom: 1px dashed var(--border-subtle);
+    }
+
+    .activity-row:last-child { border-bottom: 0; }
+
+    .activity-row .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--success);
+      justify-self: center;
+    }
+
+    .activity-row .dot.warm { background: var(--warm); }
+    .activity-row .dot.accent { background: var(--accent); }
+
+    /* Footer artboard note grid */
+    .takeaways {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    .takeaway {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: var(--text-secondary);
+    }
+
+    .takeaway strong {
+      display: block;
+      color: var(--text-primary);
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    /* ---------- Responsive ---------- */
+
+    @media (max-width: 1280px) {
+      .shell {
+        grid-template-columns: 220px minmax(0, 1fr) 240px;
+        min-height: 700px;
+      }
+      .shell.no-rail { grid-template-columns: 220px minmax(0, 1fr); }
+      .goal-content { grid-template-columns: 1fr; }
+      .empty-illustration { min-height: 320px; }
+    }
+
+    @media (max-width: 980px) {
+      body { padding: 18px; }
+      .hero { flex-direction: column; }
+      .model-strip { grid-template-columns: 1fr; }
+      .shell, .shell.no-rail { grid-template-columns: 1fr; min-height: auto; }
+      .app-sidebar { min-height: 220px; }
+      .rail { border-left: 0; border-top: 1px solid var(--border-subtle); }
+      .session-stepper { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .top-metrics, .dashboard-grid, .bottom-cards, .options-row, .time-row, .check-grid, .explain-grid, .takeaways {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- ===================== HERO ===================== -->
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="brand">
+          <span class="brand-mark">A</span>
+          <span>AI Course Builder</span>
+        </div>
+        <h1>One persistent shell. Always know where you are.</h1>
+        <p>
+          Today every step of the flow renders as its own full-screen page with no back button, so the learner can
+          lose orientation between Goal Intake, Home, the Program Map, and a Session. This redesign borrows
+          SlideFlow's three-pane shell — sidebar on the left, a doc-head toolbar with breadcrumbs at the top of the
+          stage, and a context rail on the right — while reusing every existing token, card, and accent from
+          <code>CourseBuilderThemePalette.swift</code>.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <div class="chip">4 surfaces · Goal Intake · Home · Program Map · Session Workspace</div>
+        <button class="button secondary" id="theme-toggle" type="button">Switch to Dark</button>
+      </div>
+    </section>
+
+    <!-- ===================== MENTAL MODEL ===================== -->
+    <section class="model-strip">
+      <article class="model-card">
+        <div class="model-label">Sidebar · 232pt</div>
+        <h3>The "where am I" column</h3>
+        <p>
+          Brand at top, search, then two sections: <strong>Programs</strong> (your created journeys, with a
+          letter-badge avatar) and <strong>Views</strong> (Home, Program Map, Sessions, Review, Notes). One
+          pill is always highlighted — selection drives the route, no NavigationStack required.
+        </p>
+        <div class="model-mini">
+          <div class="mm-side">SIDEBAR</div>
+          <div class="mm-stage">STAGE</div>
+          <div class="mm-rail">RAIL</div>
+        </div>
+      </article>
+      <article class="model-card">
+        <div class="model-label">Stage column · flex</div>
+        <h3>DocHead + content</h3>
+        <p>
+          A 54pt toolbar at the top of the stage shows the current location as a clickable breadcrumb
+          (Program › Stage › Session). Primary actions and segmented mode toggles cluster on the right. The
+          breadcrumb itself replaces the explicit back button — every segment is a tap-target back to that level.
+        </p>
+        <div class="model-mini">
+          <div class="mm-side">SIDEBAR</div>
+          <div class="mm-stage">STAGE · DOCHEAD + CONTENT</div>
+          <div class="mm-rail">RAIL</div>
+        </div>
+      </article>
+      <article class="model-card">
+        <div class="model-label">Context rail · 264pt</div>
+        <h3>Lives next to the work</h3>
+        <p>
+          The rail surfaces the secondary information that used to require a separate page or modal:
+          <strong>Today's focus</strong> on Home, <strong>selected stage details</strong> on the Program Map, and
+          the <strong>AI Tutor</strong> during a session. Hidden on Goal Intake — empty state earns its own real
+          estate.
+        </p>
+        <div class="model-mini">
+          <div class="mm-side">SIDEBAR</div>
+          <div class="mm-stage">STAGE</div>
+          <div class="mm-rail">CONTEXT</div>
+        </div>
+      </article>
+    </section>
+
+    <!-- ===================== ARTBOARD 1: GOAL INTAKE ===================== -->
+    <article class="artboard">
+      <div class="artboard-shell">
+        <div class="shell no-rail">
+
+          <!-- Sidebar (empty-state variant: Programs section is empty, "+ New Program" is highlighted) -->
+          <aside class="app-sidebar">
+            <div class="brand">
+              <span class="brand-mark">A</span>
+              <span>Course Builder</span>
+            </div>
+
+            <div class="sb-search">
+              <span class="sb-search-icon"></span>
+              <span>Search</span>
+            </div>
+
+            <div class="sb-section">
+              <div class="sb-section-head">
+                <span>Programs</span>
+                <span class="sb-section-add">+</span>
+              </div>
+              <div class="sb-row active">
+                <span class="sb-icon">+</span>
+                <span>New Program</span>
+                <span></span>
+              </div>
+              <div class="sb-row muted" style="padding-top:6px; font-size:11.5px;">
+                <span></span>
+                <span style="font-style: italic;">No programs yet</span>
+                <span></span>
+              </div>
+            </div>
+
+            <div class="sb-divider"></div>
+
+            <div class="sb-section">
+              <div class="sb-section-head"><span>Views</span></div>
+              <div class="sb-row muted">
+                <span class="sb-icon">⌂</span>
+                <span>Home</span>
+                <span></span>
+              </div>
+              <div class="sb-row muted">
+                <span class="sb-icon">◎</span>
+                <span>Program Map</span>
+                <span></span>
+              </div>
+              <div class="sb-row muted">
+                <span class="sb-icon">▣</span>
+                <span>Sessions</span>
+                <span></span>
+              </div>
+              <div class="sb-row muted">
+                <span class="sb-icon">↺</span>
+                <span>Review</span>
+                <span></span>
+              </div>
+              <div class="sb-row muted">
+                <span class="sb-icon">✎</span>
+                <span>Notes</span>
+                <span></span>
+              </div>
+            </div>
+
+            <div class="sb-spacer"></div>
+
+            <div class="sb-tutor-status">
+              <span></span>
+              <span>AI Tutor idle</span>
+              <span class="dot-live"></span>
+            </div>
+
+            <div class="sb-user">
+              <div class="avatar"></div>
+              <div>
+                <div class="sb-user-name">Alex Kim</div>
+                <div class="sb-user-meta">learner</div>
+              </div>
+              <span class="sb-gear">⚙</span>
+            </div>
+          </aside>
+
+          <!-- Stage column -->
+          <main class="stage">
+            <div class="dochead">
+              <div class="dh-back" title="Sidebar is the back affordance">≡</div>
+              <div class="dh-title-stack">
+                <span class="dh-title">New Program</span>
+                <span class="dh-meta">Step 1 of 1 · Goal intake</span>
+              </div>
+              <div class="dh-actions">
+                <div class="dh-iconbtn" title="Examples">★</div>
+                <div class="dh-iconbtn" title="Import">⇣</div>
+                <div class="dh-vsep"></div>
+                <button class="button secondary compact">Preview Plan</button>
+                <button class="button primary compact">Start Learning</button>
+              </div>
+            </div>
+
+            <div class="stage-content">
+              <div class="goal-content">
+                <div class="goal-copy">
+                  <h2>Let's build your personalized course</h2>
+                  <p>
+                    Tell us your goal and we'll turn it into a structured learning path with focused sessions,
+                    practice, checkpoints, and review. The program will appear in the sidebar the moment you start.
+                  </p>
+
+                  <div class="input-block">
+                    <div class="input-label">Learning Goal</div>
+                    <div class="goal-input">
+                      <div class="goal-icon">λ</div>
+                      <span>I want to learn Haskell programming language</span>
+                    </div>
+                  </div>
+
+                  <div class="section-label">Starting Level</div>
+                  <div class="options-row">
+                    <div class="option-card active">
+                      <strong>Beginner</strong>
+                      <span>New to the topic</span>
+                    </div>
+                    <div class="option-card">
+                      <strong>Intermediate</strong>
+                      <span>Some experience</span>
+                    </div>
+                    <div class="option-card">
+                      <strong>Advanced</strong>
+                      <span>Very comfortable</span>
+                    </div>
+                  </div>
+
+                  <div class="section-label">Time Budget</div>
+                  <div class="time-row">
+                    <div class="metric-card">
+                      <strong>30 min/day</strong>
+                      <span>Fast and consistent</span>
+                    </div>
+                    <div class="metric-card option-card active">
+                      <strong>1 hr/day</strong>
+                      <span>Balanced pace</span>
+                    </div>
+                    <div class="metric-card">
+                      <strong>2+ hrs/day</strong>
+                      <span>Deep immersion</span>
+                    </div>
+                  </div>
+
+                  <div class="section-label">We'll Generate</div>
+                  <div class="check-grid">
+                    <div class="check-item">Structured learning path</div>
+                    <div class="check-item">AI tutor hints and feedback</div>
+                    <div class="check-item">Hands-on practice and projects</div>
+                    <div class="check-item">Review scheduling and milestones</div>
+                  </div>
+
+                  <div class="action-row">
+                    <button class="button secondary">Preview Plan</button>
+                    <button class="button primary">Start Learning</button>
+                  </div>
+                </div>
+
+                <div class="empty-illustration">
+                  <div class="empty-panel note">
+                    <div class="section-label">Session Blueprint</div>
+                    <div class="note-lines">
+                      <div class="note-line"></div>
+                      <div class="note-line"></div>
+                      <div class="note-line"></div>
+                      <div class="note-line"></div>
+                    </div>
+                  </div>
+                  <div class="empty-panel main">
+                    <div class="lambda">λ</div>
+                    <div class="empty-lines">
+                      <div class="empty-line short"></div>
+                      <div class="empty-line long"></div>
+                      <div class="empty-line mid"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
+
+        </div>
+      </div>
+
+      <div class="artboard-label">
+        <strong>1. Goal Intake — empty state</strong>
+        <span>Onboarding inside the shell</span>
+      </div>
+      <div class="artboard-note">
+        <strong>What changed:</strong> the sidebar exists from the very first launch instead of taking over the screen.
+        <strong>Programs</strong> is empty and <strong>+ New Program</strong> is highlighted as the active row, so the
+        Goal Intake form is unmistakably the next move. The DocHead's title reads <em>New Program · Step 1 of 1</em>;
+        the primary CTAs also live on the right of the toolbar so they stay reachable as the form scrolls. The
+        right rail is intentionally hidden — empty state earns full breathing room.
+      </div>
+    </article>
+
+    <!-- ===================== ARTBOARD 2: HOME DASHBOARD ===================== -->
+    <article class="artboard">
+      <div class="artboard-shell">
+        <div class="shell">
+
+          <aside class="app-sidebar">
+            <div class="brand">
+              <span class="brand-mark">A</span>
+              <span>Course Builder</span>
+            </div>
+
+            <div class="sb-search">
+              <span class="sb-search-icon"></span>
+              <span>Search</span>
+            </div>
+
+            <div class="sb-section">
+              <div class="sb-section-head">
+                <span>Programs</span>
+                <span class="sb-section-add">+</span>
+              </div>
+              <div class="sb-row">
+                <span class="sb-icon lambda">λ</span>
+                <span>Haskell Journey</span>
+                <span class="sb-trail">5/24</span>
+              </div>
+              <div class="sb-row muted">
+                <span class="sb-icon teal">π</span>
+                <span>Stats Refresher</span>
+                <span class="sb-trail">paused</span>
+              </div>
+            </div>
+
+            <div class="sb-divider"></div>
+
+            <div class="sb-section">
+              <div class="sb-section-head"><span>Haskell Journey</span></div>
+              <div class="sb-row active">
+                <span class="sb-icon">⌂</span>
+                <span>Home</span>
+                <span></span>
+              </div>
+              <div class="sb-row">
+                <span class="sb-icon">◎</span>
+                <span>Program Map</span>
+                <span class="sb-trail">4 stages</span>
+              </div>
+              <div class="sb-row">
+                <span class="sb-icon">▣</span>
+                <span>Sessions</span>
+                <span class="sb-trail">24</span>
+              </div>
+              <div class="sb-row">
+                <span class="sb-icon">↺</span>
+                <span>Review</span>
+                <span class="sb-trail dot"></span>
+              </div>
+              <div class="sb-row">
+                <span class="sb-icon">✎</span>
+                <span>Notes</span>
+                <span class="sb-trail">12</span>
+              </div>
+            </div>
+
+            <div class="sb-spacer"></div>
+
+            <div class="sb-tutor-status">
+              <span></span>
+              <span>AI Tutor ready</span>
+              <span class="dot-live"></span>
+            </div>
+
+            <div class="sb-user">
+              <div class="avatar"></div>
+              <div>
+                <div class="sb-user-name">Alex Kim</div>
+                <div class="sb-user-meta">7-day streak</div>
+              </div>
+              <span class="sb-gear">⚙</span>
+            </div>
+          </aside>
+
+          <main class="stage">
+            <div class="dochead">
+              <div class="dh-back" title="Sidebar is the back affordance">≡</div>
+              <div class="dh-title-stack">
+                <span class="dh-title">Haskell Journey</span>
+                <span class="dh-meta">Beginner · 1 hr/day · Stage 1 of 4</span>
+              </div>
+              <div class="dh-actions">
+                <div class="seg-group">
+                  <span class="seg active">Today</span>
+                  <span class="seg">Week</span>
+                  <span class="seg">All time</span>
+                </div>
+                <div class="dh-vsep"></div>
+                <div class="dh-iconbtn" title="Pause program">⏸</div>
+                <div class="dh-iconbtn" title="Settings">⚙</div>
+                <div class="dh-vsep"></div>
+                <button class="button primary compact">Resume Session</button>
+              </div>
+            </div>
+
+            <div class="stage-content">
+              <div class="top-metrics">
+                <div class="metric-pill">
+                  <strong>Current Stage</strong>
+                  <div class="metric-main"><span class="badge-circle">1</span> Functions &amp; Types</div>
+                  <span class="tiny">5 / 12 sessions</span>
+                </div>
+                <div class="metric-pill">
+                  <strong>This Week's Focus</strong>
+                  <div class="metric-main"><span class="badge-circle">◎</span> Type Signatures</div>
+                  <span class="tiny">3 sessions • 2 hr</span>
+                </div>
+                <div class="metric-pill">
+                  <strong>Streak</strong>
+                  <div class="metric-main"><span style="font-size:24px;">🔥</span> 7 days</div>
+                  <span class="tiny">Keep it going</span>
+                </div>
+              </div>
+
+              <div class="dashboard-grid">
+                <section class="card session-card">
+                  <div class="card-title">Today's Session</div>
+                  <div class="session-card-title">
+                    <div>
+                      <h4>Reading Type Signatures</h4>
+                      <p>Understand how to read and interpret Haskell type signatures.</p>
+                    </div>
+                    <div class="session-icon">λ</div>
+                  </div>
+                  <div class="session-foot">
+                    <div class="tiny">35 min • 3 exercises • 1 checkpoint</div>
+                    <button class="button primary compact">Continue Session</button>
+                  </div>
+                </section>
+
+                <section class="card">
+                  <div class="card-title">Progress</div>
+                  <strong style="font-size:15px;">Completed Sessions</strong>
+                  <div class="tiny" style="margin-top:4px;">8 / 24 in the current journey</div>
+                  <div class="progress-row">
+                    <div class="progress-dot complete"></div>
+                    <div class="progress-dot complete"></div>
+                    <div class="progress-dot complete"></div>
+                    <div class="progress-dot complete"></div>
+                    <div class="progress-dot current"></div>
+                    <div class="progress-dot"></div>
+                    <div class="progress-dot"></div>
+                    <div class="progress-dot"></div>
+                    <div class="progress-dot"></div>
+                    <div class="progress-dot"></div>
+                  </div>
+                </section>
+              </div>
+
+              <div class="bottom-cards">
+                <section class="small-card">
+                  <div class="card-title">Weak Spots</div>
+                  <strong>Type Classes</strong>
+                  <p>Accuracy is dipping whenever abstractions stop being concrete.</p>
+                  <div class="status-tag warning">50% accuracy</div>
+                  <div class="button secondary compact" style="width:fit-content;">Review Now</div>
+                </section>
+
+                <section class="small-card">
+                  <div class="card-title">Recommended Review</div>
+                  <strong>Algebraic Data Types</strong>
+                  <p>Last reviewed 5 days ago. Good moment to bring it back before moving on.</p>
+                  <div class="status-tag info">Review queued</div>
+                  <div class="button secondary compact" style="width:fit-content;">Open Review</div>
+                </section>
+
+                <section class="small-card">
+                  <div class="card-title">Weekly Milestone</div>
+                  <strong>Complete 3 more sessions</strong>
+                  <p>Finish this stage and unlock the next block on type classes and polymorphism.</p>
+                  <div class="milestone-track"><span></span></div>
+                  <div class="tiny">3 / 4 sessions complete</div>
+                </section>
+              </div>
+            </div>
+          </main>
+
+          <aside class="rail">
+            <div class="rail-head">
+              <h5>Today</h5>
+              <span class="rail-meta">Tue · May 10</span>
+            </div>
+            <div class="rail-body">
+              <div class="today-card">
+                <div class="section-label" style="color: var(--accent);">Up next</div>
+                <h6>Reading Type Signatures</h6>
+                <span class="meta">Stage 1 · Session 4 of 12 · 35 min</span>
+                <button class="button primary compact" style="justify-self: start;">Start now</button>
+              </div>
+
+              <div class="rail-card">
+                <div class="section-label">Recent activity</div>
+                <div class="activity-row">
+                  <span class="dot"></span>
+                  <span>Type Signatures</span>
+                  <span class="tiny">12m</span>
+                </div>
+                <div class="activity-row">
+                  <span class="dot accent"></span>
+                  <span>Practice · 4/5</span>
+                  <span class="tiny">1h</span>
+                </div>
+                <div class="activity-row">
+                  <span class="dot warm"></span>
+                  <span>Review · ADT</span>
+                  <span class="tiny">yesterday</span>
+                </div>
+                <div class="activity-row">
+                  <span class="dot"></span>
+                  <span>Values &amp; Expressions</span>
+                  <span class="tiny">Mon</span>
+                </div>
+              </div>
+
+              <div class="rail-card">
+                <div class="section-label">Tutor whisper</div>
+                <p style="font-size: 12px; line-height: 1.55; color: var(--text-secondary); margin: 0;">
+                  You crushed type-signature reading yesterday. Today's checkpoint will press on the same idea
+                  with one harder example — keep momentum.
+                </p>
+              </div>
+            </div>
+          </aside>
+
+        </div>
+      </div>
+
+      <div class="artboard-label">
+        <strong>2. Home Dashboard — persistent shell</strong>
+        <span>Daily command center</span>
+      </div>
+      <div class="artboard-note">
+        <strong>What changed:</strong> the sidebar's <em>Views</em> section is scoped to the active program — so
+        "Home", "Program Map", and "Sessions" mean <strong>this</strong> program, not the app at large. The
+        <strong>Today</strong> rail surfaces the next session, the most-recent activity, and a tutor-authored nudge
+        without leaving the dashboard. The DocHead segmented control swaps the dashboard's time scope (Today / Week /
+        All time) without changing route, so the page never reloads under the user.
+      </div>
+    </article>
+
+    <!-- ===================== ARTBOARD 3: PROGRAM MAP ===================== -->
+    <article class="artboard">
+      <div class="artboard-shell">
+        <div class="shell">
+
+          <aside class="app-sidebar">
+            <div class="brand">
+              <span class="brand-mark">A</span>
+              <span>Course Builder</span>
+            </div>
+
+            <div class="sb-search">
+              <span class="sb-search-icon"></span>
+              <span>Search</span>
+            </div>
+
+            <div class="sb-section">
+              <div class="sb-section-head">
+                <span>Programs</span>
+                <span class="sb-section-add">+</span>
+              </div>
+              <div class="sb-row">
+                <span class="sb-icon lambda">λ</span>
+                <span>Haskell Journey</span>
+                <span class="sb-trail">5/24</span>
+              </div>
+              <div class="sb-row muted">
+                <span class="sb-icon teal">π</span>
+                <span>Stats Refresher</span>
+                <span class="sb-trail">paused</span>
+              </div>
+            </div>
+
+            <div class="sb-divider"></div>
+
+            <div class="sb-section">
+              <div class="sb-section-head"><span>Haskell Journey</span></div>
+              <div class="sb-row">
+                <span class="sb-icon">⌂</span>
+                <span>Home</span>
+                <span></span>
+              </div>
+              <div class="sb-row active">
+                <span class="sb-icon">◎</span>
+                <span>Program Map</span>
+                <span class="sb-trail">4 stages</span>
+              </div>
+              <div class="sb-row">
+                <span class="sb-icon">▣</span>
+                <span>Sessions</span>
+                <span class="sb-trail">24</span>
+              </div>
+              <div class="sb-row">
+                <span class="sb-icon">↺</span>
+                <span>Review</span>
+                <span class="sb-trail dot"></span>
+              </div>
+              <div class="sb-row">
+                <span class="sb-icon">✎</span>
+                <span>Notes</span>
+                <span class="sb-trail">12</span>
+              </div>
+            </div>
+
+            <div class="sb-spacer"></div>
+
+            <div class="sb-tutor-status">
+              <span></span>
+              <span>AI Tutor ready</span>
+              <span class="dot-live"></span>
+            </div>
+
+            <div class="sb-user">
+              <div class="avatar"></div>
+              <div>
+                <div class="sb-user-name">Alex Kim</div>
+                <div class="sb-user-meta">7-day streak</div>
+              </div>
+              <span class="sb-gear">⚙</span>
+            </div>
+          </aside>
+
+          <main class="stage">
+            <div class="dochead">
+              <div class="dh-back" title="Back to Home">‹</div>
+              <div class="dh-title-stack">
+                <span class="dh-crumb">
+                  <span class="crumb">Haskell Journey</span>
+                  <span class="sep">›</span>
+                  <span class="crumb current">Program Map</span>
+                </span>
+              </div>
+              <div class="dh-actions">
+                <div class="seg-group">
+                  <span class="seg active">Map</span>
+                  <span class="seg">List</span>
+                  <span class="seg">Concepts</span>
+                </div>
+                <div class="dh-vsep"></div>
+                <div class="dh-iconbtn" title="Re-plan">↻</div>
+                <div class="dh-iconbtn" title="Export">⇪</div>
+                <div class="dh-vsep"></div>
+                <button class="button secondary compact">Edit Goal</button>
+              </div>
+            </div>
+
+            <div class="stage-content">
+              <div class="pm-headline">
+                <div>
+                  <h3>Functions &amp; Types · Stage 1</h3>
+                  <div class="tiny">A personalized 4-stage path · 12 sessions in this stage</div>
+                </div>
+                <div class="status-tag success">5 / 12 in progress</div>
+              </div>
+
+              <div class="pm-list-wrap">
+                <div class="pm-path"></div>
+                <div class="pm-list">
+                  <section class="stage-card current selected">
+                    <div class="stage-head">
+                      <div>
+                        <div class="tiny">Stage 1 · current</div>
+                        <h4>Functions &amp; Types</h4>
+                        <div class="tiny">Learn the building blocks of Haskell.</div>
+                      </div>
+                      <div class="progress-summary">
+                        <strong>In Progress</strong>
+                        5 / 12 sessions
+                      </div>
+                    </div>
+                    <div class="milestone-track" style="margin-bottom: 14px;"><span style="width:46%;"></span></div>
+                    <div class="session-list">
+                      <div class="session-row complete">
+                        <div class="num">✓</div>
+                        <div>Introduction to Haskell</div>
+                        <div class="tiny">25 min</div>
+                      </div>
+                      <div class="session-row complete">
+                        <div class="num">✓</div>
+                        <div>Values, Expressions, and Types</div>
+                        <div class="tiny">28 min</div>
+                      </div>
+                      <div class="session-row complete">
+                        <div class="num">✓</div>
+                        <div>Type Signatures</div>
+                        <div class="tiny">32 min</div>
+                      </div>
+                      <div class="session-row current selected">
+                        <div class="num">4</div>
+                        <div>Reading Type Signatures</div>
+                        <div class="tiny">In progress</div>
+                      </div>
+                      <div class="session-row">
+                        <div class="num">5</div>
+                        <div>Let Bindings</div>
+                        <div class="tiny">30 min</div>
+                      </div>
+                      <div class="session-row">
+                        <div class="num">6</div>
+                        <div>Lambda Functions</div>
+                        <div class="tiny">28 min</div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <div class="lock-row">
+                    <span>Stage 2 · Type Classes &amp; Polymorphism</span>
+                    <span class="status-tag">Locked · 7 sessions</span>
+                  </div>
+                  <div class="lock-row">
+                    <span>Stage 3 · Algebraic Data Types</span>
+                    <span class="status-tag">Locked · 5 sessions</span>
+                  </div>
+                  <div class="lock-row">
+                    <span>Stage 4 · Monads &amp; Effects</span>
+                    <span class="status-tag">Locked · pending</span>
+                  </div>
+                </div>
+
+                <section class="goal-card">
+                  <div style="display:flex;align-items:center;gap:14px;">
+                    <div class="badge-circle">🎓</div>
+                    <div>
+                      <h4 style="margin:0; font-size:16px;">Graduation Goal</h4>
+                      <p style="font-size:12.5px; margin-top:4px;">Build real-world projects and ship a small Haskell portfolio.</p>
+                    </div>
+                  </div>
+                  <div class="button secondary compact">0 / 4 projects</div>
+                </section>
+              </div>
+            </div>
+          </main>
+
+          <aside class="rail">
+            <div class="rail-head">
+              <h5>Selected stage</h5>
+              <span class="rail-meta">Stage 1</span>
+            </div>
+            <div class="rail-body">
+              <div class="today-card">
+                <div class="section-label" style="color: var(--accent);">Functions &amp; Types</div>
+                <h6>5 / 12 sessions</h6>
+                <span class="meta">Started 7 days ago · ~14 hr remaining at 1 hr/day</span>
+                <button class="button primary compact" style="justify-self: start;">Continue stage</button>
+              </div>
+
+              <div class="rail-card">
+                <div class="section-label">Concepts you'll meet</div>
+                <p>Type signatures · Polymorphism (intro) · Pattern matching · Let bindings · Lambdas · Higher-order functions</p>
+              </div>
+
+              <div class="rail-card">
+                <div class="section-label">Checkpoint</div>
+                <h6 style="font-size:13px;">Read &amp; write 5 signatures</h6>
+                <p>You'll be asked to predict types for unseen functions. Tutor will give two hints before showing the answer.</p>
+                <div class="status-tag info">Due session 6</div>
+              </div>
+
+              <div class="rail-card">
+                <div class="section-label">If you struggle</div>
+                <p>The Adaptation engine can insert a recovery session before Stage 2 unlocks. You'll see it appear here.</p>
+              </div>
+            </div>
+          </aside>
+
+        </div>
+      </div>
+
+      <div class="artboard-label">
+        <strong>3. Program Map — context in the rail</strong>
+        <span>Route visibility</span>
+      </div>
+      <div class="artboard-note">
+        <strong>What changed:</strong> the breadcrumb (<em>Haskell Journey › Program Map</em>) replaces the floating
+        page header; tapping <em>Haskell Journey</em> takes you straight back to Home, and the rail keeps the
+        currently-selected stage's checkpoints, key concepts, and recovery options visible without a modal. The
+        segmented control on the right swaps Map / List / Concepts views inline — never a full page transition.
+      </div>
+    </article>
+
+    <!-- ===================== ARTBOARD 4: SESSION WORKSPACE ===================== -->
+    <article class="artboard">
+      <div class="artboard-shell">
+        <div class="shell">
+
+          <aside class="app-sidebar">
+            <div class="brand">
+              <span class="brand-mark">A</span>
+              <span>Course Builder</span>
+            </div>
+
+            <div class="sb-search">
+              <span class="sb-search-icon"></span>
+              <span>Search</span>
+            </div>
+
+            <div class="sb-section">
+              <div class="sb-section-head">
+                <span>Programs</span>
+                <span class="sb-section-add">+</span>
+              </div>
+              <div class="sb-row">
+                <span class="sb-icon lambda">λ</span>
+                <span>Haskell Journey</span>
+                <span class="sb-trail">5/24</span>
+              </div>
+              <div class="sb-row muted">
+                <span class="sb-icon teal">π</span>
+                <span>Stats Refresher</span>
+                <span class="sb-trail">paused</span>
+              </div>
+            </div>
+
+            <div class="sb-divider"></div>
+
+            <div class="sb-section">
+              <div class="sb-section-head"><span>Haskell Journey</span></div>
+              <div class="sb-row">
+                <span class="sb-icon">⌂</span>
+                <span>Home</span>
+                <span></span>
+              </div>
+              <div class="sb-row">
+                <span class="sb-icon">◎</span>
+                <span>Program Map</span>
+                <span class="sb-trail">4 stages</span>
+              </div>
+              <div class="sb-row active">
+                <span class="sb-icon">▣</span>
+                <span>Sessions</span>
+                <span class="sb-trail">04</span>
+              </div>
+              <div class="sb-row">
+                <span class="sb-icon">↺</span>
+                <span>Review</span>
+                <span class="sb-trail dot"></span>
+              </div>
+              <div class="sb-row">
+                <span class="sb-icon">✎</span>
+                <span>Notes</span>
+                <span class="sb-trail">12</span>
+              </div>
+            </div>
+
+            <div class="sb-divider"></div>
+
+            <div class="sb-section">
+              <div class="sb-section-head"><span>Stage 1 · sessions</span></div>
+              <div class="sb-row muted">
+                <span class="sb-icon" style="background: var(--success-soft); color: var(--success);">✓</span>
+                <span>01 · Intro to Haskell</span>
+                <span></span>
+              </div>
+              <div class="sb-row muted">
+                <span class="sb-icon" style="background: var(--success-soft); color: var(--success);">✓</span>
+                <span>02 · Values &amp; Types</span>
+                <span></span>
+              </div>
+              <div class="sb-row muted">
+                <span class="sb-icon" style="background: var(--success-soft); color: var(--success);">✓</span>
+                <span>03 · Type Signatures</span>
+                <span></span>
+              </div>
+              <div class="sb-row active">
+                <span class="sb-icon">04</span>
+                <span>Reading Signatures</span>
+                <span class="sb-trail dot"></span>
+              </div>
+              <div class="sb-row muted">
+                <span class="sb-icon">05</span>
+                <span>Let Bindings</span>
+                <span></span>
+              </div>
+            </div>
+
+            <div class="sb-spacer"></div>
+
+            <div class="sb-tutor-status">
+              <span></span>
+              <span>Tutor live in rail</span>
+              <span class="dot-live"></span>
+            </div>
+
+            <div class="sb-user">
+              <div class="avatar"></div>
+              <div>
+                <div class="sb-user-name">Alex Kim</div>
+                <div class="sb-user-meta">in session</div>
+              </div>
+              <span class="sb-gear">⚙</span>
+            </div>
+          </aside>
+
+          <main class="stage">
+            <div class="dochead">
+              <div class="dh-back" title="Back to Program Map">‹</div>
+              <div class="dh-title-stack">
+                <span class="dh-crumb">
+                  <span class="crumb">Haskell Journey</span>
+                  <span class="sep">›</span>
+                  <span class="crumb">Stage 1 · Functions &amp; Types</span>
+                  <span class="sep">›</span>
+                  <span class="crumb current">Session 4 · Reading Type Signatures</span>
+                </span>
+              </div>
+              <div class="dh-actions">
+                <div class="dh-step-trail">
+                  <div class="step-dots">
+                    <span class="step-dot complete"></span>
+                    <span class="step-dot complete"></span>
+                    <span class="step-dot current"></span>
+                    <span class="step-dot"></span>
+                    <span class="step-dot"></span>
+                    <span class="step-dot"></span>
+                  </div>
+                  Step 3 of 6
+                </div>
+                <div class="dh-vsep"></div>
+                <div class="dh-iconbtn" title="Notes">✎</div>
+                <div class="dh-iconbtn" title="Tutor panel">✦</div>
+                <div class="dh-vsep"></div>
+                <button class="button secondary compact">Pause</button>
+                <button class="button primary compact">Run Check</button>
+              </div>
+            </div>
+
+            <div class="stage-content">
+              <div class="session-stepper">
+                <div class="step-pill complete">
+                  <div class="step-bar" style="width:100%;"></div>
+                  <span class="step-name">Why</span>
+                  <span class="step-sub">Why this matters</span>
+                </div>
+                <div class="step-pill complete">
+                  <div class="step-bar" style="width:100%;"></div>
+                  <span class="step-name">Concept</span>
+                  <span class="step-sub">Core idea</span>
+                </div>
+                <div class="step-pill current">
+                  <div class="step-bar" style="width:42%;"></div>
+                  <span class="step-name">Example</span>
+                  <span class="step-sub">See it in action</span>
+                </div>
+                <div class="step-pill">
+                  <div class="step-bar"></div>
+                  <span class="step-name">Practice</span>
+                  <span class="step-sub">Try it yourself</span>
+                </div>
+                <div class="step-pill locked">
+                  <div class="step-bar"></div>
+                  <span class="step-name">Check</span>
+                  <span class="step-sub">Verify</span>
+                </div>
+                <div class="step-pill locked">
+                  <div class="step-bar"></div>
+                  <span class="step-name">Reflect</span>
+                  <span class="step-sub">Wrap up</span>
+                </div>
+              </div>
+
+              <div class="ws-title">
+                <h3>Reading Type Signatures</h3>
+                <p>Let's decode a few examples and build intuition for how Haskell describes function behavior.</p>
+              </div>
+
+              <div class="lesson-stack">
+                <section class="lesson-card">
+                  <div class="section-label">Example 1</div>
+                  <div class="code-sample">length :: [a] -&gt; Int</div>
+                  <div class="explain-grid">
+                    <div class="explain-cell">
+                      <strong>[a]</strong>
+                      <span>List of any type</span>
+                    </div>
+                    <div class="explain-cell">
+                      <strong>-&gt;</strong>
+                      <span>Takes as input</span>
+                    </div>
+                    <div class="explain-cell">
+                      <strong>Int</strong>
+                      <span>Returns an Int</span>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="lesson-card">
+                  <div class="section-label">Example 2</div>
+                  <div class="code-sample">map :: (a -&gt; b) -&gt; [a] -&gt; [b]</div>
+                  <div class="explain-grid">
+                    <div class="explain-cell">
+                      <strong>(a -&gt; b)</strong>
+                      <span>Transform one value</span>
+                    </div>
+                    <div class="explain-cell">
+                      <strong>[a]</strong>
+                      <span>Original list</span>
+                    </div>
+                    <div class="explain-cell">
+                      <strong>[b]</strong>
+                      <span>New list</span>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="practice-box">
+                  <div class="section-label">Practice</div>
+                  <p style="font-size:13px; color: var(--text-secondary);">Fill in the blank to complete the type signature.</p>
+                  <code>head :: [a] -&gt; ___</code>
+                  <p style="font-size:12.5px; color: var(--text-secondary);">Hint: the function returns the first element of a list, not another list.</p>
+                  <div class="workspace-actions">
+                    <button class="button primary compact">Run Check</button>
+                    <button class="button secondary compact">Need Hint</button>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </main>
+
+          <aside class="rail">
+            <div class="rail-head">
+              <h5>AI Tutor</h5>
+              <span class="rail-meta">Live · Opus 4.7</span>
+            </div>
+            <div class="rail-body">
+              <div class="tutor-card">
+                <div class="section-label" style="color: var(--accent);">Hint</div>
+                <h6>Here's a starting nudge</h6>
+                <p>Think about what type of value a function like <code>head</code> returns.</p>
+                <div class="hint-button">Show another hint</div>
+              </div>
+
+              <div class="tutor-card">
+                <div class="section-label">Common mistakes</div>
+                <p>Confusing input and output types, treating arrows like tuples, or assuming a concrete type too early.</p>
+              </div>
+
+              <div class="tutor-card">
+                <div class="section-label">Your notes</div>
+                <div class="notes-box">
+                  Type signatures are right-associative. The arrow binds to the right, so
+                  <code>a -&gt; b -&gt; c</code> really means <code>a -&gt; (b -&gt; c)</code>.
+                </div>
+                <div class="hint-button" style="background: var(--card-muted); color: var(--text-secondary);">Add note</div>
+              </div>
+            </div>
+          </aside>
+
+        </div>
+      </div>
+
+      <div class="artboard-label">
+        <strong>4. Session Workspace — tutor in the rail, steps at the top</strong>
+        <span>Main learning surface</span>
+      </div>
+      <div class="artboard-note">
+        <strong>What changed:</strong> the previous session-only "steps" left column moves into a horizontal stepper
+        at the top of the stage; the AI Tutor — previously buried in the third column — now lives in the persistent
+        right rail, where it stays available across <em>any</em> screen, not just inside a session. The breadcrumb
+        names every level: tap <em>Stage 1 · Functions &amp; Types</em> to land on the Program Map at the right
+        stage; tap <em>Haskell Journey</em> to land on Home. No back stack, no surprise unmounts.
+      </div>
+    </article>
+
+    <!-- ===================== TAKEAWAYS ===================== -->
+    <section class="artboard" style="padding: 22px 24px;">
+      <h3 style="margin: 0 0 4px; font-size: 22px; letter-spacing: -0.025em;">What carries over to the SwiftUI build</h3>
+      <p class="muted" style="margin: 0; font-size: 13.5px; line-height: 1.6;">
+        The work needed in <code>AppFeature</code> + <code>LearningUI</code> mirrors SlideFlow's three-pane shell.
+        Every screen below already exists in the codebase; the change is to host them inside one persistent
+        <code>HStack</code> instead of swapping full-screen views.
+      </p>
+      <div class="takeaways">
+        <div class="takeaway">
+          <strong>Promote SidebarShell to the root</strong>
+          The current shell wraps Home + Program Map. Move it outside <code>AppView</code>'s switch so Goal Intake
+          and Session Workspace live <em>inside</em> it instead of replacing it. <code>currentRoute</code> stays the
+          single source of truth for which view renders in the stage.
+        </div>
+        <div class="takeaway">
+          <strong>Add a DocHead component</strong>
+          A 54pt toolbar at the top of the stage column, similar to SlideFlow's <code>DocHead</code>. Owns the
+          breadcrumb (programName › stageTitle › sessionTitle), segmented mode toggles, and primary CTA.
+          Breadcrumb segments are buttons that dispatch <code>routeSelected</code> / <code>stageSelected</code> /
+          <code>sessionSelected</code>.
+        </div>
+        <div class="takeaway">
+          <strong>Introduce a context rail</strong>
+          A 264pt right column that is conditionally rendered per route — Today on Home, Selected Stage on Program
+          Map, AI Tutor during a Session, hidden on Goal Intake. Mirrors SlideFlow's pattern of swapping
+          <code>SlideRailView</code> ↔ <code>InspectorView</code> via a Bool guard, not a NavigationStack.
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const toggle = document.getElementById("theme-toggle");
+    toggle.addEventListener("click", () => {
+      const next = root.dataset.theme === "light" ? "dark" : "light";
+      root.dataset.theme = next;
+      toggle.textContent = next === "light" ? "Switch to Dark" : "Switch to Light";
+    });
+  </script>
+</body>
+</html>
