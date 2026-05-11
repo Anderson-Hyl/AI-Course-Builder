@@ -31,6 +31,11 @@ public struct SessionWorkspaceFeature {
         /// Latest persisted attempt per block, keyed by `SessionBlock.ID`.
         /// Loaded on `.onAppear`; updated in place after each submit.
         public var attempts: [SessionBlock.ID: Attempt] = [:]
+        /// Whether the right-edge AI Tutor slide-over is visible. Default
+        /// `false` so focus mode reads distraction-free. Phase 5.5 will
+        /// wire the panel to a real Tutor engine; for now the content is
+        /// a placeholder + composer stub.
+        public var tutorOpen: Bool = false
 
         public init(sessionID: Session.ID) {
             self.sessionID = sessionID
@@ -61,6 +66,8 @@ public struct SessionWorkspaceFeature {
         case nextTapped
         case previousTapped
         case doneTapped
+        /// Topbar AI Tutor button / slide-over close-X.
+        case tutorToggled
         /// User picked an option in a `multiple_choice` block. The
         /// reducer evaluates deterministically + persists; the render
         /// updates from the persisted `Attempt` so the UI shows the
@@ -122,6 +129,10 @@ public struct SessionWorkspaceFeature {
 
             case .doneTapped:
                 return .send(.delegate(.dismiss))
+
+            case .tutorToggled:
+                state.tutorOpen.toggle()
+                return .none
 
             case .multipleChoiceSelected(let blockID, let index):
                 guard let block = state.blocks.first(where: { $0.id == blockID }),

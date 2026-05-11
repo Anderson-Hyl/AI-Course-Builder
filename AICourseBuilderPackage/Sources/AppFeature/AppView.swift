@@ -96,9 +96,30 @@ public struct AppView: View {
                     action: \.destination.sessionWorkspace
                 )
             ) { workspaceStore in
-                SessionWorkspaceView(store: workspaceStore)
+                SessionWorkspaceView(
+                    store: workspaceStore,
+                    courseTitle: sessionCourseTitle,
+                    stageTitle: sessionStageTitle
+                )
             }
         }
+    }
+
+    private var sessionCourseTitle: String {
+        guard let goal = store.currentGoal else { return "Course" }
+        let raw = goal.normalizedTopic ?? goal.text
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.count <= 32 ? trimmed : String(trimmed.prefix(29)) + "…"
+    }
+
+    private var sessionStageTitle: String {
+        // Pull the active stage title from the CourseHome state. When
+        // currentBlockIndex transitions across stages this stays the
+        // CourseHome's current stage, not the session's parent stage —
+        // close enough for Phase 5 since each course only carries one
+        // active stage at a time. Phase 5.5 derives it precisely from
+        // the session's parent sprint → stage chain.
+        store.courseHome.currentStage?.title ?? "Stage"
     }
 
     private var bootstrapView: some View {
