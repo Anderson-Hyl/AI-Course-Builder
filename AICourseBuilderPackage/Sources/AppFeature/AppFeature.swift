@@ -1,6 +1,7 @@
 import ChatClients
 import ComposableArchitecture
 import Foundation
+import IdentifiedCollections
 import LearningModels
 import LearningRepository
 import LearningUI
@@ -17,18 +18,44 @@ public struct AppFeature {
         case sessionWorkspace(SessionWorkspaceFeature)
     }
 
+    /// Top-level app surface in the App Structure v2 model: Library is
+    /// the home screen, `.newCourse` is the Goal Intake flow, and
+    /// `.course(_)` is "inside" a specific course. Replaces the
+    /// implicit single-course gating that used to be `currentGoal != nil`.
+    /// Named `AppScope` (not `Scope`) to avoid the collision with TCA's
+    /// `Scope` reducer that's used inside `body`.
+    public enum AppScope: Equatable, Sendable {
+        case library
+        case newCourse
+        case course(LearningGoal.ID)
+    }
+
     @ObservableState
     public struct State: Equatable {
         public var isBootstrapping: Bool = true
         public var profile: LearnerProfile?
+        /// All goals the learner has created. Drives the Library grid.
+        /// Populated by `bootstrapCompleted` and refreshed by
+        /// `goalsRefreshed` after observer-driven mutations.
+        public var goals: IdentifiedArrayOf<LearningGoal> = []
+        /// The currently-entered course. `nil` outside `.course(_)` scope.
+        /// Kept as a stored property (rather than computed from `scope` +
+        /// `goals`) so existing in-course flows (Home, ProgramMap,
+        /// SessionWorkspace, planning, retries) and tests can read it
+        /// without churn — Phase 4 collapses this when CourseHome lands.
         public var currentGoal: LearningGoal?
         public var currentProgram: ProgramBlueprint?
         public var goalIntake: GoalIntakeFeature.State = .init()
         public var home: HomeFeature.State = .init()
         public var programMap: ProgramMapFeature.State = .init()
-        /// Which sidebar destination is currently active. Switches
-        /// between Home and Program Map; other routes are inert until
-        /// their screens land.
+        /// Top-level app surface. Defaults to `.library` after bootstrap.
+        /// Renamed to `appScope` (not `scope`) to avoid the collision with
+        /// `Store.scope(state:action:)` — bare `store.scope` then
+        /// ambiguates between the dynamic-member-lookup property and the
+        /// store-scoping method.
+        public var appScope: AppScope = .library
+        /// In-course sub-route — which sidebar destination shows when
+        /// `scope == .course(_)`. Inert outside a course.
         public var currentRoute: SidebarRoute = .home
         @Presents public var destination: Destination.State?
 
@@ -63,7 +90,7 @@ public struct AppFeature {
 
     public enum Action {
         case onAppear
-        case bootstrapCompleted(profile: LearnerProfile, goal: LearningGoal?)
+        case bootstrapCompleted(profile: LearnerProfile, goals: [LearningGoal])
         case bootstrapFailed(String)
         case goalIntake(GoalIntakeFeature.Action)
         case home(HomeFeature.Action)
@@ -73,6 +100,18 @@ public struct AppFeature {
         /// other routes are inert until their screens land.
         case routeSelected(SidebarRoute)
         case destination(PresentationAction<Destination.Action>)
+        /// Library tile / resume strip tap — enter a specific course.
+        case courseSelected(LearningGoal.ID)
+        /// "+ New course" tile / Topbar button — present Goal Intake.
+        case newCourseRequested
+        /// User backed out of Goal Intake without submitting.
+        case goalIntakeCancelled
+        /// Library Topbar back / breadcrumb tap — leave the current
+        /// course and return to the Library grid.
+        case returnToLibrary
+        /// Internal: refresh `state.goals` from the repository after a
+        /// mutation. Triggered by `goalCreated` / `goalReset` observers.
+        case goalsRefreshed([LearningGoal])
         /// Fired by the app-level observer after `createGoal` commits.
         case goalCreated(LearningGoal.ID)
         /// Fired after `deleteGoal` commits — returns the user to Goal Intake.
@@ -141,34 +180,29 @@ public struct AppFeature {
                 return .run { [repository] send in
                     do {
                         let profile = try await repository.ensureCurrentProfile()
-                        let goal = try await repository.fetchActiveGoal()
-                        await send(.bootstrapCompleted(profile: profile, goal: goal))
+                        let goals = try await repository.fetchAllGoals()
+                        await send(.bootstrapCompleted(profile: profile, goals: goals))
                     } catch {
                         await send(.bootstrapFailed(error.localizedDescription))
                     }
                 }
 
-            case .bootstrapCompleted(let profile, let goal):
+            case .bootstrapCompleted(let profile, let goals):
                 state.isBootstrapping = false
                 state.profile = profile
-                state.currentGoal = goal
+                state.goals = IdentifiedArray(uniqueElements: goals)
                 state.home.profile = profile
-                state.home.goal = goal
                 state.programMap.profile = profile
-                state.programMap.goal = goal
-                // Seed the form with profile defaults so re-opening Goal
-                // Intake (after a Reset) starts from where the user left off.
+                // Seed the form with profile defaults so opening Goal
+                // Intake starts from where the user left off.
                 state.goalIntake.startingLevel = profile.startingLevel
                 state.goalIntake.weeklyTimeBudgetHours = profile.weeklyTimeBudgetHours
                 state.goalIntake.learningStyles = profile.learningStyles
                 state.goalIntake.targetOutcome = profile.targetOutcome ?? ""
-                if let goal {
-                    if state.pendingOutlineForNewGoal {
-                        state.pendingOutlineForNewGoal = false
-                        return .send(.loadOutlineForGoal(goal.id))
-                    }
-                    return .send(.loadProgramForGoal(goal.id))
-                }
+                // Library is the new home screen. Pre-redesign single-
+                // course auto-resume is intentionally gone — the user
+                // picks a course from Library, even if there's only one.
+                state.appScope = .library
                 return .none
 
             case .bootstrapFailed:
@@ -224,11 +258,56 @@ public struct AppFeature {
             case .goalCreated(let id):
                 return .run { [repository] send in
                     let goals = try await repository.fetchAllGoals()
-                    if let row = goals.first(where: { $0.id == id }) {
-                        let profile = try await repository.ensureCurrentProfile()
-                        await send(.bootstrapCompleted(profile: profile, goal: row))
-                    }
+                    await send(.goalsRefreshed(goals))
+                    // Auto-enter the new course so the planning + Home
+                    // path runs without an extra Library round-trip.
+                    await send(.courseSelected(id))
                 }
+
+            case .goalsRefreshed(let goals):
+                state.goals = IdentifiedArray(uniqueElements: goals)
+                return .none
+
+            case .courseSelected(let id):
+                guard let goal = state.goals[id: id] else { return .none }
+                state.appScope = .course(id)
+                state.currentGoal = goal
+                state.home.profile = state.profile
+                state.home.goal = goal
+                state.programMap.profile = state.profile
+                state.programMap.goal = goal
+                if state.pendingOutlineForNewGoal {
+                    state.pendingOutlineForNewGoal = false
+                    return .send(.loadOutlineForGoal(id))
+                }
+                return .send(.loadProgramForGoal(id))
+
+            case .newCourseRequested:
+                state.appScope = .newCourse
+                state.goalIntake = GoalIntakeFeature.State()
+                if let profile = state.profile {
+                    state.goalIntake.startingLevel = profile.startingLevel
+                    state.goalIntake.weeklyTimeBudgetHours = profile.weeklyTimeBudgetHours
+                    state.goalIntake.learningStyles = profile.learningStyles
+                    state.goalIntake.targetOutcome = profile.targetOutcome ?? ""
+                }
+                return .none
+
+            case .goalIntakeCancelled:
+                state.appScope = .library
+                return .none
+
+            case .returnToLibrary:
+                state.appScope = .library
+                state.currentGoal = nil
+                state.currentProgram = nil
+                state.currentRoute = .home
+                state.destination = nil
+                state.home = HomeFeature.State()
+                state.home.profile = state.profile
+                state.programMap = ProgramMapFeature.State()
+                state.programMap.profile = state.profile
+                return .none
 
             case .loadProgramForGoal(let goalID):
                 guard let profileID = state.profile?.id else { return .none }
@@ -294,6 +373,10 @@ public struct AppFeature {
             case .outlineRefined:
                 state.outlineProposal = nil
                 state.preservedGoalText = state.currentGoal?.text ?? state.goalIntake.goalText
+                // Refining = go back to Goal Intake, not Library. Pin
+                // the scope here so the subsequent goalReset (via
+                // resetTapped) doesn't bounce the user to Library.
+                state.appScope = .newCourse
                 return .send(.resetTapped)
 
             case .planningStarted:
@@ -457,6 +540,8 @@ public struct AppFeature {
                 state.destination = nil
                 state.goalIntake = GoalIntakeFeature.State()
                 if let profile = state.profile {
+                    state.home.profile = profile
+                    state.programMap.profile = profile
                     state.goalIntake.startingLevel = profile.startingLevel
                     state.goalIntake.weeklyTimeBudgetHours = profile.weeklyTimeBudgetHours
                     state.goalIntake.learningStyles = profile.learningStyles
@@ -466,7 +551,16 @@ public struct AppFeature {
                     state.goalIntake.goalText = preserved
                     state.preservedGoalText = nil
                 }
-                return .none
+                // Routine deletes return to Library. `outlineRefined`
+                // pre-sets `scope = .newCourse` so the user lands back
+                // in Goal Intake instead.
+                if state.appScope != .newCourse {
+                    state.appScope = .library
+                }
+                return .run { [repository] send in
+                    let goals = try await repository.fetchAllGoals()
+                    await send(.goalsRefreshed(goals))
+                }
             }
         }
         .ifLet(\.$destination, action: \.destination)

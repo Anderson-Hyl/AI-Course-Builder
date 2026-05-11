@@ -107,7 +107,10 @@ public struct LibraryView: View {
         case 12..<18: "Good afternoon"
         default: "Good evening"
         }
-        let name = store.profile?.displayName.split(separator: " ").first.map(String.init)
+        let name = store.profile?.displayName?
+            .split(separator: " ")
+            .first
+            .map(String.init)
         return name.map { "\(phase), \($0)." } ?? "\(phase)."
     }
 
