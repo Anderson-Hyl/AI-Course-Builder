@@ -112,6 +112,10 @@ public struct AppFeature {
         /// Internal: refresh `state.goals` from the repository after a
         /// mutation. Triggered by `goalCreated` / `goalReset` observers.
         case goalsRefreshed([LearningGoal])
+        /// Internal helper: routes after a `goalCreated` observer fire.
+        /// Stays in the New Course modal when a preview is pending,
+        /// otherwise auto-enters the course like Library taps do.
+        case routeAfterGoalCreated(LearningGoal.ID)
         /// Fired by the app-level observer after `createGoal` commits.
         case goalCreated(LearningGoal.ID)
         /// Fired after `deleteGoal` commits — returns the user to Goal Intake.
@@ -259,14 +263,27 @@ public struct AppFeature {
                 return .run { [repository] send in
                     let goals = try await repository.fetchAllGoals()
                     await send(.goalsRefreshed(goals))
-                    // Auto-enter the new course so the planning + Home
-                    // path runs without an extra Library round-trip.
-                    await send(.courseSelected(id))
+                    await send(.routeAfterGoalCreated(id))
                 }
 
             case .goalsRefreshed(let goals):
                 state.goals = IdentifiedArray(uniqueElements: goals)
                 return .none
+
+            case .routeAfterGoalCreated(let id):
+                if state.appScope == .newCourse {
+                    // Stay in the modal. Point `currentGoal` at the new
+                    // row so the outline call has a valid ID.
+                    state.currentGoal = state.goals[id: id]
+                    if state.pendingOutlineForNewGoal {
+                        state.pendingOutlineForNewGoal = false
+                        return .send(.loadOutlineForGoal(id))
+                    }
+                    // No preview pending → user tapped Start without
+                    // previewing. Exit modal and run full planning.
+                    return .send(.courseSelected(id))
+                }
+                return .send(.courseSelected(id))
 
             case .courseSelected(let id):
                 guard let goal = state.goals[id: id] else { return .none }
@@ -368,6 +385,13 @@ public struct AppFeature {
             case .outlineConfirmed:
                 guard let goalID = state.currentGoal?.id else { return .none }
                 state.outlineProposal = nil
+                // From inside the New Course modal, route through
+                // `courseSelected` so the modal exits AND full planning
+                // kicks off. From `.course` scope (legacy refinement
+                // flow), just trigger loadProgramForGoal directly.
+                if state.appScope == .newCourse {
+                    return .send(.courseSelected(goalID))
+                }
                 return .send(.loadProgramForGoal(goalID))
 
             case .outlineRefined:
@@ -388,6 +412,13 @@ public struct AppFeature {
                 state.isPlanning = false
                 state.planningError = nil
                 state.currentProgram = program
+                // Defensive: if planning succeeded while we're still in
+                // `.newCourse` (e.g. the user clicked Start before any
+                // scope transition), promote scope to the new course so
+                // the modal doesn't re-render under us.
+                if case .newCourse = state.appScope, let goalID = state.currentGoal?.id {
+                    state.appScope = .course(goalID)
+                }
                 state.home.goal = state.currentGoal
                 state.home.program = program
                 state.programMap.goal = state.currentGoal

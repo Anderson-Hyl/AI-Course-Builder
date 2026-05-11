@@ -27,16 +27,26 @@ public struct AppView: View {
         Group {
             if store.isBootstrapping {
                 bootstrapView
-            } else if store.isPlanning {
+            } else if store.isPlanning, store.appScope != .newCourse {
+                // `.newCourse` handles the streaming outline inline in
+                // the right panel of the modal. For every other scope
+                // (full blueprint generation, retries from .course),
+                // take over the whole screen so progress is unmistakable.
                 PlanningProgressView(mode: store.pendingPlanningMode)
-            } else if let error = store.planningError {
+            } else if let error = store.planningError, store.appScope != .newCourse {
+                // Same reasoning as above — the modal could surface its
+                // own error UI later, but for now route the user to the
+                // full-screen retry surface.
                 PlanningErrorView(
                     error: error,
                     onRetry: { store.send(.retryPlanningTapped) },
                     onUseDemo: { store.send(.useDemoFallbackTapped) },
                     onOpenSettings: { store.send(.openAPIKeySheet) }
                 )
-            } else if let outline = store.outlineProposal {
+            } else if let outline = store.outlineProposal, store.appScope != .newCourse {
+                // The modal renders the outline inline; this branch is
+                // for the legacy `.course` refinement path that still
+                // bumps to the full ProgramPreviewView.
                 ProgramPreviewView(
                     outline: outline,
                     onStartLearning: { store.send(.outlineConfirmed) },
@@ -62,7 +72,7 @@ public struct AppView: View {
         case .library:
             LibraryView(store: store)
         case .newCourse:
-            goalIntakeWrapped
+            NewCourseSheetView(store: store)
         case .course:
             courseShell
         }
@@ -147,54 +157,6 @@ public struct AppView: View {
             // yet. Their pills are inert in the sidebar so the user
             // can't actually land here, but fall back to Home anyway.
             HomeView(store: store.scope(state: \.home, action: \.home))
-        }
-    }
-
-    /// Phase 2 wrapper around the existing full-screen `GoalIntakeView`
-    /// that adds a Cancel affordance so the user can back out to Library.
-    /// Phase 3 turns this into a proper modal sheet with a streaming
-    /// outline-preview side panel.
-    private var goalIntakeWrapped: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                Button {
-                    store.send(.goalIntakeCancelled)
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text("Cancel")
-                            .font(.system(size: 13, weight: .medium))
-                    }
-                    .foregroundStyle(theme.text.secondary)
-                    .padding(.horizontal, 12)
-                    .frame(height: 30)
-                    .background(theme.surface.cardMuted, in: Capsule())
-                }
-                .buttonStyle(.plain)
-                Spacer(minLength: 0)
-                Text("New course")
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .tracking(1.2)
-                    .textCase(.uppercase)
-                    .foregroundStyle(theme.text.tertiary)
-                Spacer(minLength: 0)
-                // Symmetric spacer to keep the title centered against the
-                // Cancel button on the left.
-                Color.clear.frame(width: 78, height: 1)
-            }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 12)
-            .background(theme.surface.page)
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(theme.border.subtle)
-                    .frame(height: 1)
-            }
-
-            GoalIntakeView(
-                store: store.scope(state: \.goalIntake, action: \.goalIntake)
-            )
         }
     }
 
