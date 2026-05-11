@@ -78,23 +78,18 @@ public struct AppView: View {
         }
     }
 
-    /// In-course chrome — still the legacy `SidebarShell` for Phase 2 so
-    /// Home, Program Map, and SessionWorkspace push behave identically.
-    /// Phase 4 replaces this with the new `Shell + CourseSidebar +
-    /// CourseHomeView` combo.
+    /// In-course chrome — App Structure v2 `Shell` + `CourseSidebar`
+    /// hosting `CourseHomeView` (the Map + Today merged surface).
+    /// SessionWorkspace pushes via NavigationStack on top.
     private var courseShell: some View {
         NavigationStack {
-            SidebarShell(
-                activeRoute: store.currentRoute,
-                userName: store.profile?.displayName ?? "Learner",
-                userRole: "learner",
-                onSelectRoute: { store.send(.routeSelected($0)) }
-            ) {
-                VStack(spacing: 0) {
-                    inCourseTopbar
-                    routedContent
+            CourseHomeView(
+                store: store.scope(state: \.courseHome, action: \.courseHome),
+                onReturnToLibrary: { store.send(.returnToLibrary) },
+                onSessionTapped: { id in
+                    store.send(.courseHome(.sessionTapped(id)))
                 }
-            }
+            )
             .navigationDestination(
                 item: $store.scope(
                     state: \.destination?.sessionWorkspace,
@@ -103,60 +98,6 @@ public struct AppView: View {
             ) { workspaceStore in
                 SessionWorkspaceView(store: workspaceStore)
             }
-        }
-    }
-
-    /// Phase 2 stop-gap chrome that gives the user a way out of the
-    /// in-course views back to the Library grid. Phase 4 replaces this
-    /// with the new Topbar's breadcrumb (`Library › Course title`).
-    private var inCourseTopbar: some View {
-        HStack(spacing: 8) {
-            Button {
-                store.send(.returnToLibrary)
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 11, weight: .semibold))
-                    Text("Library")
-                        .font(.system(size: 12, weight: .medium))
-                }
-                .foregroundStyle(theme.text.secondary)
-                .padding(.horizontal, 10)
-                .frame(height: 28)
-                .background(theme.surface.cardMuted, in: Capsule())
-            }
-            .buttonStyle(.plain)
-            if let title = store.currentGoal?.normalizedTopic ?? store.currentGoal?.text {
-                Text(title)
-                    .font(.system(size: 12))
-                    .foregroundStyle(theme.text.tertiary)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity)
-        .background(theme.surface.page)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(theme.border.subtle)
-                .frame(height: 1)
-        }
-    }
-
-    @ViewBuilder
-    private var routedContent: some View {
-        switch store.currentRoute {
-        case .home:
-            HomeView(store: store.scope(state: \.home, action: \.home))
-        case .programMap:
-            ProgramMapView(store: store.scope(state: \.programMap, action: \.programMap))
-        default:
-            // Sessions / AI Tutor / Review / Notes don't have screens
-            // yet. Their pills are inert in the sidebar so the user
-            // can't actually land here, but fall back to Home anyway.
-            HomeView(store: store.scope(state: \.home, action: \.home))
         }
     }
 
