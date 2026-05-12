@@ -318,6 +318,69 @@ public struct LearningRepository: Sendable {
         }
     }
 
+    /// Updates a session's status. Fires `didChangeSessions` always (so
+    /// progress rails repaint) and `didCompleteSession` when the new
+    /// status is `Session.Status.completed` so the host can drive the
+    /// post-session adaptation flow off a single hook. The transition
+    /// to `completed` is the load-bearing one for `AdaptationEngine`;
+    /// the other status values are useful for `inProgress` / `deferred`
+    /// tracking but don't have dedicated hooks yet.
+    public func updateSessionStatus(
+        id: Session.ID,
+        status: String
+    ) async throws {
+        let programID = try await database.write { db -> ProgramBlueprint.ID in
+            try Session.find(id).update { row in
+                row.status = #bind(status)
+            }
+            .execute(db)
+            return try Self.programID(forSessionID: id, db: db)
+        }
+        await observer.didChangeSessions(programID: programID)
+        if status == Session.Status.completed {
+            await observer.didCompleteSession(id, programID: programID)
+        }
+    }
+
+    /// Updates a sprint's status. Fires `didChangeSessions` since sprint
+    /// status drives the same Course Home / Program Map repaint as a
+    /// session change. `AdaptationEngine` calls this after marking the
+    /// last session in a sprint complete.
+    public func updateSprintStatus(
+        id: Sprint.ID,
+        status: String
+    ) async throws {
+        let programID = try await database.write { db -> ProgramBlueprint.ID in
+            try Sprint.find(id).update { row in
+                row.status = #bind(status)
+            }
+            .execute(db)
+            return try Self.programID(forSprintID: id, db: db)
+        }
+        await observer.didChangeSessions(programID: programID)
+    }
+
+    /// Updates a stage's status. Fires `didChangeSessions` so Program
+    /// Map repaints. `AdaptationEngine` calls this after the last sprint
+    /// in a stage completes; the next stage transitions from `locked`
+    /// to `inProgress` in the same flow.
+    public func updateStageStatus(
+        id: Stage.ID,
+        status: String
+    ) async throws {
+        let programID = try await database.write { db -> ProgramBlueprint.ID in
+            guard let stage = try Stage.find(id).fetchOne(db) else {
+                throw LearningRepositoryError.stageNotFound(id)
+            }
+            try Stage.find(id).update { row in
+                row.status = #bind(status)
+            }
+            .execute(db)
+            return stage.programID
+        }
+        await observer.didChangeSessions(programID: programID)
+    }
+
     // MARK: - Session blocks
 
     /// Inserts blocks in `order`-ascending order so the first row's
@@ -426,6 +489,239 @@ public struct LearningRepository: Sendable {
             // keeps the most recent attempt per block. If the same block
             // has multiple attempts (resubmits), the trailing one wins.
             return Dictionary(attempts.map { ($0.blockID, $0) }, uniquingKeysWith: { _, latest in latest })
+        }
+    }
+
+    // MARK: - Concept graph
+
+    public func fetchConceptNodes(
+        forProgramID programID: ProgramBlueprint.ID
+    ) async throws -> [ConceptNode] {
+        try await database.read { db in
+            try ConceptNode
+                .where { $0.programID.eq(programID) }
+                .order { $0.createdAt }
+                .fetchAll(db)
+        }
+    }
+
+    /// Idempotent concept creation keyed on title within a program. Returns
+    /// the existing concept's id if one already exists with the same case-
+    /// insensitive title; otherwise inserts a new node. Used by
+    /// `AdaptationEngine` to grow the concept graph as the LLM identifies
+    /// topics across sessions — saves the planner from having to seed every
+    /// concept upfront. Title comparison is case-insensitive but the stored
+    /// title preserves the LLM's casing for display.
+    @discardableResult
+    public func findOrCreateConceptNode(
+        programID: ProgramBlueprint.ID,
+        title: String,
+        prerequisites: [UUID] = []
+    ) async throws -> ConceptNode.ID {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = trimmedTitle.lowercased()
+        let prerequisitesJSON = ConceptNode.encodePrerequisites(prerequisites)
+        let result = try await database.write { db -> (id: UUID, didInsert: Bool) in
+            // Case-insensitive match in app code rather than via #sql LIKE
+            // — the program-scoped concept set is small (tens to low
+            // hundreds of rows) and StructuredQueries doesn't expose a
+            // portable lower() helper here.
+            let siblings = try ConceptNode
+                .where { $0.programID.eq(programID) }
+                .fetchAll(db)
+            if let existing = siblings.first(where: {
+                $0.title.lowercased() == normalized
+            }) {
+                return (existing.id, false)
+            }
+            let newID = UUID()
+            try ConceptNode.insert {
+                ConceptNode.Draft(
+                    id: newID,
+                    programID: programID,
+                    title: trimmedTitle,
+                    prerequisitesJSON: prerequisitesJSON
+                )
+            }
+            .execute(db)
+            return (newID, true)
+        }
+        if result.didInsert {
+            await observer.didChangeMastery(programID: programID)
+        }
+        return result.id
+    }
+
+    // MARK: - Mastery state
+
+    public func fetchMasteryStates(
+        forProgramID programID: ProgramBlueprint.ID
+    ) async throws -> [MasteryState] {
+        try await database.read { db in
+            let conceptIDs = try ConceptNode
+                .where { $0.programID.eq(programID) }
+                .select(\.id)
+                .fetchAll(db)
+            guard !conceptIDs.isEmpty else { return [] }
+            return try MasteryState
+                .where { $0.conceptID.in(conceptIDs) }
+                .fetchAll(db)
+        }
+    }
+
+    public func fetchMasteryState(
+        forConceptID conceptID: ConceptNode.ID
+    ) async throws -> MasteryState? {
+        try await database.read { db in
+            try MasteryState
+                .where { $0.conceptID.eq(conceptID) }
+                .fetchOne(db)
+        }
+    }
+
+    /// Upsert by `conceptID`: updates the existing row in place if one
+    /// exists, otherwise inserts a fresh row. Fires `didChangeMastery`
+    /// once per call regardless of which branch executed. `level` and
+    /// `confidence` are clamped to `[0, 1]` defensively — the LLM
+    /// occasionally returns slightly out-of-range floats and the schema
+    /// has no CHECK constraint here.
+    public func upsertMasteryState(
+        conceptID: ConceptNode.ID,
+        level: Double,
+        confidence: Double,
+        lastReviewedAt: Date?,
+        nextReviewAt: Date?
+    ) async throws {
+        let clampedLevel = max(0.0, min(1.0, level))
+        let clampedConfidence = max(0.0, min(1.0, confidence))
+        let programID = try await database.write { db -> ProgramBlueprint.ID? in
+            guard let concept = try ConceptNode.find(conceptID).fetchOne(db) else {
+                return nil
+            }
+            if let existing = try MasteryState.where({ $0.conceptID.eq(conceptID) }).fetchOne(db) {
+                try MasteryState.find(existing.id).update { row in
+                    row.level = #bind(clampedLevel)
+                    row.confidence = #bind(clampedConfidence)
+                    if let lastReviewedAt {
+                        row.lastReviewedAt = #bind(lastReviewedAt)
+                    }
+                    if let nextReviewAt {
+                        row.nextReviewAt = #bind(nextReviewAt)
+                    }
+                }
+                .execute(db)
+            } else {
+                try MasteryState.insert {
+                    MasteryState.Draft(
+                        id: UUID(),
+                        conceptID: conceptID,
+                        level: clampedLevel,
+                        confidence: clampedConfidence,
+                        lastReviewedAt: lastReviewedAt,
+                        nextReviewAt: nextReviewAt
+                    )
+                }
+                .execute(db)
+            }
+            return concept.programID
+        }
+        if let programID {
+            await observer.didChangeMastery(programID: programID)
+        }
+    }
+
+    // MARK: - Review queue
+
+    public func fetchReviewItems(
+        forProgramID programID: ProgramBlueprint.ID,
+        dueBefore: Date? = nil
+    ) async throws -> [ReviewItem] {
+        try await database.read { db in
+            let conceptIDs = try ConceptNode
+                .where { $0.programID.eq(programID) }
+                .select(\.id)
+                .fetchAll(db)
+            guard !conceptIDs.isEmpty else { return [] }
+            if let cutoff = dueBefore {
+                return try ReviewItem
+                    .where { $0.conceptID.in(conceptIDs) }
+                    .where { $0.dueAt.lte(cutoff) }
+                    .order { $0.dueAt }
+                    .fetchAll(db)
+            }
+            return try ReviewItem
+                .where { $0.conceptID.in(conceptIDs) }
+                .order { $0.dueAt }
+                .fetchAll(db)
+        }
+    }
+
+    @discardableResult
+    public func createReviewItem(
+        conceptID: ConceptNode.ID,
+        dueAt: Date,
+        intervalDays: Int,
+        lapseCount: Int = 0
+    ) async throws -> ReviewItem.ID {
+        let id = UUID()
+        let programID = try await database.write { db -> ProgramBlueprint.ID? in
+            guard let concept = try ConceptNode.find(conceptID).fetchOne(db) else {
+                return nil
+            }
+            try ReviewItem.insert {
+                ReviewItem.Draft(
+                    id: id,
+                    conceptID: conceptID,
+                    dueAt: dueAt,
+                    intervalDays: intervalDays,
+                    lapseCount: lapseCount
+                )
+            }
+            .execute(db)
+            return concept.programID
+        }
+        if let programID {
+            await observer.didChangeReviewQueue(programID: programID)
+        }
+        return id
+    }
+
+    // MARK: - Artifacts
+
+    /// Records a learner-output artifact (or an engine-generated reflection
+    /// like a `session_adaptation` summary). Free-form `kind` + JSON
+    /// payload — see `Artifact.Kind` for the discriminator constants.
+    /// No observer hook fires today: nothing in the app currently
+    /// subscribes to artifact writes. Add one when Review Vault wires in.
+    @discardableResult
+    public func recordArtifact(
+        sessionID: Session.ID? = nil,
+        attemptID: Attempt.ID? = nil,
+        kind: String,
+        contentJSON: String
+    ) async throws -> Artifact.ID {
+        let id = UUID()
+        try await database.write { db in
+            try Artifact.insert {
+                Artifact.Draft(
+                    id: id,
+                    sessionID: sessionID,
+                    attemptID: attemptID,
+                    kind: kind,
+                    contentJSON: contentJSON
+                )
+            }
+            .execute(db)
+        }
+        return id
+    }
+
+    public func fetchArtifacts(forSessionID sessionID: Session.ID) async throws -> [Artifact] {
+        try await database.read { db in
+            try Artifact
+                .where { $0.sessionID.eq(sessionID) }
+                .order { $0.createdAt }
+                .fetchAll(db)
         }
     }
 

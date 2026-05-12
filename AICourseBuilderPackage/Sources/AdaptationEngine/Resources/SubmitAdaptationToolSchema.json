@@ -1,0 +1,118 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["outcome", "concepts", "review_items", "next_step"],
+  "properties": {
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completion", "summary", "highlights", "concerns"],
+      "properties": {
+        "completion": {
+          "type": "string",
+          "enum": ["completed", "partial", "struggling"],
+          "description": "Qualitative read on the session. completed = clearly hit the objective. partial = mostly there with minor gaps. struggling = consistent misses; recommend recovery."
+        },
+        "summary": {
+          "type": "string",
+          "description": "2-4 plain-prose sentences addressed to the learner: what they did well, what's still soft, what's coming next. No emoji, no hype."
+        },
+        "highlights": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 3,
+          "items": { "type": "string" },
+          "description": "0-3 short phrases (≤ 8 words) flagging the strongest signals of understanding."
+        },
+        "concerns": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 3,
+          "items": { "type": "string" },
+          "description": "0-3 short phrases (≤ 8 words) flagging the weak spots."
+        }
+      }
+    },
+    "concepts": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 5,
+      "description": "Discrete ideas this session taught or revisited. Reuse existing concept titles verbatim when one fits.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "mastery_estimate", "confidence", "evidence"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Short noun phrase in Title Case (e.g. 'Pure Functions')."
+          },
+          "mastery_estimate": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Running estimate of how solid the learner is on this concept. 0.0 = no signal / wrong, 0.5 = mixed, 0.85+ = solid."
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "How sure YOU are of mastery_estimate. Strong evidence (correct code_exercise) = high; weak evidence (single MCQ) = low."
+          },
+          "evidence": {
+            "type": "string",
+            "description": "One sentence citing what in the session led to this estimate."
+          }
+        }
+      }
+    },
+    "review_items": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 4,
+      "description": "Spaced-repetition flashcards. Skip entirely if learner is struggling or every concept is at mastery ≥ 0.9 with high confidence.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["concept_title", "due_in_days", "front", "back"],
+        "properties": {
+          "concept_title": {
+            "type": "string",
+            "description": "MUST match the title of one of the concepts entries (case-insensitive)."
+          },
+          "due_in_days": {
+            "type": "integer",
+            "enum": [1, 2, 3, 7, 14, 30],
+            "description": "SM-2 cadence rung. 1 = wobbly, 3 = check soon, 7 = routine spaced-rep, 14/30 = solid."
+          },
+          "front": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Short cue. Question or prompt form. Avoid yes/no."
+          },
+          "back": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "Answer in plain prose. Light Markdown OK; no code fences."
+          }
+        }
+      }
+    },
+    "next_step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "rationale"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["advance", "recommend_review_session", "recommend_recovery"],
+          "description": "advance = ready for the next planned session. recommend_review_session = solid but pile of pending reviews. recommend_recovery = struggling, needs remedial session."
+        },
+        "rationale": {
+          "type": "string",
+          "description": "One sentence explaining the choice, addressed to the learner."
+        }
+      }
+    }
+  }
+}

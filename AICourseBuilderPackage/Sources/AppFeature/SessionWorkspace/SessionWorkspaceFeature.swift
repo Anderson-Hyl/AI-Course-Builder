@@ -1,3 +1,4 @@
+import AdaptationEngine
 import ComposableArchitecture
 import EvaluationEngine
 import Foundation
@@ -54,6 +55,25 @@ public struct SessionWorkspaceFeature {
         /// with a retry button. Cleared on the next successful send.
         public var tutorError: String?
 
+        /// Tracks the post-session adaptation lifecycle. `.idle` until the
+        /// learner taps Done; `.running` while `AdaptationEngine.adapt`
+        /// is in flight; `.failed` if it threw (the workspace stays open
+        /// with the error overlay so the learner can retry or skip);
+        /// `.completed` is brief — the dismiss effect fires immediately
+        /// after, but the brief in-state allows a "session adapted"
+        /// banner to flash if a future pass wants one.
+        public var adaptation: AdaptationStatus = .idle
+        /// Adaptation result digest from the most recent `adapt` call.
+        /// Kept for future "Session summary" surfaces; not displayed yet.
+        public var adaptationSummary: AdaptationSummary?
+
+        public enum AdaptationStatus: Equatable {
+            case idle
+            case running
+            case completed
+            case failed(String)
+        }
+
         public init(sessionID: Session.ID) {
             self.sessionID = sessionID
         }
@@ -83,6 +103,22 @@ public struct SessionWorkspaceFeature {
         case nextTapped
         case previousTapped
         case doneTapped
+        /// Escape paths (breadcrumb, "Exit session" pill) that bypass
+        /// adaptation. The learner is leaving without completing the
+        /// session, so we just dismiss without scoring or adapting.
+        case exitTapped
+        /// Adaptation completed successfully — store the summary and
+        /// dismiss the workspace.
+        case adaptationCompleted(AdaptationSummary)
+        /// Adaptation threw. The workspace stays open with the error
+        /// overlay; learner picks Retry or Skip.
+        case adaptationFailed(String)
+        /// Retry button on the adaptation error overlay.
+        case adaptationRetryTapped
+        /// Skip button on the adaptation error overlay — dismisses the
+        /// workspace without re-running adaptation. Session stays in
+        /// whatever status it had.
+        case adaptationSkipTapped
         /// Topbar AI Tutor button / slide-over close-X.
         case tutorToggled
         /// Per-keystroke composer update.
@@ -119,10 +155,12 @@ public struct SessionWorkspaceFeature {
 
     @Dependency(\.learningRepository) var repository
     @Dependency(\.tutorEngine) var tutorEngine
+    @Dependency(\.adaptationEngine) var adaptationEngine
     @Dependency(\.uuid) var uuid
 
     private enum CancelID: Hashable {
         case tutorStream
+        case adaptation
     }
 
     public init() {}
@@ -168,9 +206,68 @@ public struct SessionWorkspaceFeature {
                 return .none
 
             case .doneTapped:
+                // Re-entrancy guard: a slow LLM round-trip + impatient
+                // double-taps shouldn't fire two adaptation requests.
+                if state.adaptation == .running { return .none }
+                state.tutorStreaming = false
+                state.adaptation = .running
+                let id = state.sessionID
+                return .merge(
+                    .cancel(id: CancelID.tutorStream),
+                    .run { [adaptationEngine] send in
+                        do {
+                            let summary = try await adaptationEngine.adapt(id)
+                            await send(.adaptationCompleted(summary))
+                        } catch is CancellationError {
+                            // Workspace dismissed mid-adapt; nothing to surface.
+                        } catch let error as AdaptationEngineError {
+                            await send(.adaptationFailed(error.localizedDescription))
+                        } catch {
+                            await send(.adaptationFailed(error.localizedDescription))
+                        }
+                    }
+                    .cancellable(id: CancelID.adaptation, cancelInFlight: true)
+                )
+
+            case .exitTapped:
                 state.tutorStreaming = false
                 return .merge(
                     .cancel(id: CancelID.tutorStream),
+                    .cancel(id: CancelID.adaptation),
+                    .send(.delegate(.dismiss))
+                )
+
+            case .adaptationCompleted(let summary):
+                state.adaptationSummary = summary
+                state.adaptation = .completed
+                return .send(.delegate(.dismiss))
+
+            case .adaptationFailed(let message):
+                state.adaptation = .failed(message)
+                return .none
+
+            case .adaptationRetryTapped:
+                if state.adaptation == .running { return .none }
+                state.adaptation = .running
+                let id = state.sessionID
+                return .run { [adaptationEngine] send in
+                    do {
+                        let summary = try await adaptationEngine.adapt(id)
+                        await send(.adaptationCompleted(summary))
+                    } catch is CancellationError {
+                        // Cancelled by a second tap or dismiss.
+                    } catch let error as AdaptationEngineError {
+                        await send(.adaptationFailed(error.localizedDescription))
+                    } catch {
+                        await send(.adaptationFailed(error.localizedDescription))
+                    }
+                }
+                .cancellable(id: CancelID.adaptation, cancelInFlight: true)
+
+            case .adaptationSkipTapped:
+                state.adaptation = .idle
+                return .merge(
+                    .cancel(id: CancelID.adaptation),
                     .send(.delegate(.dismiss))
                 )
 

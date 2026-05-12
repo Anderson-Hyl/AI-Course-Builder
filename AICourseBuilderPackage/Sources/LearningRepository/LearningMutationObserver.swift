@@ -38,12 +38,34 @@ public protocol LearningMutationObserver: Sendable {
     /// owns the immediate scoring path; this hook is for UI signals
     /// like "tutor reviewing your answer".
     func didRecordAttempt(_ id: UUID, blockID: UUID) async
+
+    /// A session's status flipped to `completed`. Distinct from the
+    /// generic `didChangeSessions` so the host can drive the post-
+    /// session adaptation flow (workspace dismiss → Course Home
+    /// refresh → Review Vault refresh) off a single signal. Fires
+    /// AFTER the row update commits but before any cascading
+    /// adaptation writes (mastery / review queue) — those land via
+    /// `didChangeMastery` / `didChangeReviewQueue`. Default no-op.
+    func didCompleteSession(_ sessionID: UUID, programID: UUID) async
+
+    /// `MasteryState` for one or more concepts in the program changed
+    /// (level, confidence, or review schedule). `AdaptationEngine` is
+    /// the typical write origin. Default no-op until the Course Home
+    /// progress rail subscribes.
+    func didChangeMastery(programID: UUID) async
+
+    /// `ReviewItem` rows were inserted, updated, or removed. Default
+    /// no-op until the Review Vault rail subscribes.
+    func didChangeReviewQueue(programID: UUID) async
 }
 
 extension LearningMutationObserver {
     public func didCreateProgram(_ id: UUID, goalID: UUID) async {}
     public func didChangeSessions(programID: UUID) async {}
     public func didRecordAttempt(_ id: UUID, blockID: UUID) async {}
+    public func didCompleteSession(_ sessionID: UUID, programID: UUID) async {}
+    public func didChangeMastery(programID: UUID) async {}
+    public func didChangeReviewQueue(programID: UUID) async {}
 }
 
 public struct NoOpLearningMutationObserver: LearningMutationObserver {

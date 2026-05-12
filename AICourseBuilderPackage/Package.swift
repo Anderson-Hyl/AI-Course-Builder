@@ -99,6 +99,10 @@ let package = Package(
                 "LearningRepository",
                 "ChatClients",
                 .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies"),
+            ],
+            resources: [
+                .process("Resources"),
             ]
         ),
         .target(
@@ -128,6 +132,7 @@ let package = Package(
                 "LearningRepository",
                 "LearningUI",
                 "LessonRendering",
+                "AdaptationEngine",
                 "EvaluationEngine",
                 "PlanningEngine",
                 "TutorEngine",
@@ -139,6 +144,7 @@ let package = Package(
         .testTarget(
             name: "AICourseBuilderPackageTests",
             dependencies: [
+                "AdaptationEngine",
                 "AppFeature",
                 "ChatClients",
                 "EvaluationEngine",

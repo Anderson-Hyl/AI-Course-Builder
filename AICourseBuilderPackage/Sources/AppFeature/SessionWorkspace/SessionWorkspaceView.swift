@@ -46,6 +46,9 @@ public struct SessionWorkspaceView: View {
             toolbar: { toolbarSlot },
             content: { canvas }
         )
+        .overlay {
+            adaptationOverlay
+        }
         .task {
             store.send(.onAppear)
         }
@@ -54,12 +57,15 @@ public struct SessionWorkspaceView: View {
     // MARK: - Topbar
 
     private var breadcrumb: [BreadcrumbSegment] {
+        // Breadcrumb segments and the "Exit session" pill are escape
+        // routes — they bypass adaptation. Only the Done button at the
+        // end of the lesson triggers `AdaptationEngine.adapt`.
         [
             BreadcrumbSegment(courseTitle) {
-                store.send(.doneTapped)
+                store.send(.exitTapped)
             },
             BreadcrumbSegment(stageTitle) {
-                store.send(.doneTapped)
+                store.send(.exitTapped)
             },
             BreadcrumbSegment(store.session?.title ?? "Session")
         ]
@@ -71,7 +77,7 @@ public struct SessionWorkspaceView: View {
                 store.send(.tutorToggled)
             }
             ShellButton.secondary("Exit session") {
-                store.send(.doneTapped)
+                store.send(.exitTapped)
             }
         }
     }
@@ -271,6 +277,7 @@ public struct SessionWorkspaceView: View {
                     .background(theme.accent.primary, in: Capsule())
                 }
                 .buttonStyle(.plain)
+                .disabled(store.adaptation == .running)
             } else {
                 Button {
                     store.send(.nextTapped)
@@ -566,6 +573,100 @@ public struct SessionWorkspaceView: View {
             get: { store.tutorComposerDraft },
             set: { store.send(.tutorComposerChanged($0)) }
         )
+    }
+
+    // MARK: - Adaptation overlay
+
+    /// Modal overlay shown while `AdaptationEngine.adapt` is in flight or
+    /// after it failed. Blocks workspace interaction so the learner
+    /// can't double-fire adaptation or wander off mid-write. The
+    /// `.completed` branch is intentionally invisible — the dismiss
+    /// effect fires on the same frame that state flips, so the user
+    /// never sees a "completed" overlay.
+    @ViewBuilder
+    private var adaptationOverlay: some View {
+        switch store.adaptation {
+        case .running:
+            ZStack {
+                theme.surface.cardMuted
+                    .opacity(0.85)
+                    .ignoresSafeArea()
+                VStack(spacing: 14) {
+                    ProgressView()
+                        .controlSize(.large)
+                    Text("Reviewing your session…")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(theme.text.primary)
+                    Text("The tutor is scoring your answers and scheduling reviews. This takes a few seconds.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(theme.text.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 360)
+                }
+                .padding(28)
+                .background(theme.surface.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(theme.border.subtle, lineWidth: 1)
+                )
+            }
+            .transition(.opacity)
+        case .failed(let message):
+            ZStack {
+                theme.surface.cardMuted
+                    .opacity(0.85)
+                    .ignoresSafeArea()
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(theme.state.danger)
+                        Text("Couldn't score the session")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(theme.text.primary)
+                    }
+                    Text(message)
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(theme.text.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 10) {
+                        Button {
+                            store.send(.adaptationSkipTapped)
+                        } label: {
+                            Text("Skip")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(theme.text.secondary)
+                                .padding(.horizontal, 16)
+                                .frame(height: 36)
+                                .background(theme.surface.cardMuted, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        Spacer(minLength: 0)
+                        Button {
+                            store.send(.adaptationRetryTapped)
+                        } label: {
+                            Text("Retry")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 16)
+                                .frame(height: 36)
+                                .background(theme.accent.primary, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(24)
+                .frame(maxWidth: 420)
+                .background(theme.surface.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(theme.border.subtle, lineWidth: 1)
+                )
+            }
+            .transition(.opacity)
+        case .idle, .completed:
+            EmptyView()
+        }
     }
 
     // MARK: - Error
