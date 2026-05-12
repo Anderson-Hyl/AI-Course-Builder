@@ -146,25 +146,32 @@ This pass uses plain SwiftUI + system colors so the bootstrap stays small. The n
 
 ## Artifact format
 
-**Default**: any artifact a human will read is a beautiful, self-contained **HTML file** under `design/`. Markdown is reserved for artifacts a model will read.
+**The rule**: if a human is going to read it, render it as HTML. If the same content could've been a markdown file, render it as HTML *instead*. Markdown is reserved for artifacts that only a model will read.
 
-This is a hard rule, not a suggestion. Reaching for markdown to summarize finished work is the wrong shape — render it as HTML and put it in `design/` so the user can open it directly in a browser. If you started from a markdown scratchpad (a plan file, a checklist, a draft summary) and the work is now landing for human review, the deliverable is HTML; the markdown stays as your private working notes.
+This is a hard rule, not a suggestion. Reports, plans, walkthroughs, status updates, design proposals, comparison tables, post-pass summaries, anything you'd otherwise hand the user as a `.md` — write it as a self-contained HTML file. Reaching for markdown when the user is the audience is a regression; if you catch yourself doing it, stop and convert before surfacing.
 
-**Human-audience artifacts → HTML under `design/`**:
+**Audience test**:
+- *Human* will read it → **HTML**.
+- *Model* will read it (future session, prompt, tool schema) → **markdown**.
+
+**Human-audience artifacts → HTML**:
+- Plans (planning-mode deliverables, refinement notes, before/after design proposals).
 - End-of-pass landing reports and walkthroughs ("here's what shipped").
-- Status reports, design proposals, feature briefs.
+- Status reports, feature briefs, decision memos.
 - Comparison tables, before/after diagrams, screen mockups.
-- Anything the user will *read once and react to* — even something as small as a one-page progress summary.
-- A converted plan file once the planned work has landed (the HTML is the deliverable, the original markdown plan is a scratchpad).
+- Anything the user will *read once and react to* — even a one-page progress summary.
 
 **Model-audience artifacts → markdown**:
 - Engineering bibles (this file), `ARCHITECTURE.md`, `PRD.md`, `AGENTS.md`.
 - Prompts, system instructions, tool schemas (when not JSON).
 - Code comments, in-source docs.
-- Task lists, plan files actively being executed against.
+- Task lists used as harness scratchpads (TaskCreate-style).
 - Anything a future session will grep, diff, or splice into a tool call.
 
-Quick test: *human* is the audience → HTML. *Model* is the audience → markdown.
+### Where the HTML lives
+
+- **Project deliverables** (anything tied to repo work): `design/` inside the project, e.g. `design/session-summary-surface.html`. These get committed.
+- **Plan-mode deliverables**: alongside the markdown plan in `~/.claude/plans/`, same basename + `.html` extension, e.g. `~/.claude/plans/<slug>.html`. The `.md` is the harness contract; the `.html` is what the user actually reads. Mention the HTML path in your post-plan summary so the user knows where to open it. These do NOT get committed (they live outside the repo).
 
 ### HTML file requirements
 
@@ -174,7 +181,7 @@ Match `design/mvp-design-board.html` and `design/session-summary-surface.html` f
 - Light/dark via a `data-theme="light"` attribute on `<html>`; provide both swatches in `:root` and `[data-theme="dark"]`. Include a small toggle button so the user can flip themes inline.
 - System fonts only (`ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`; `ui-monospace, "JetBrains Mono", Menlo, monospace` for code). No Google Fonts, no CDN, no JS dependencies (a tiny inline `onclick` for the theme toggle is fine; nothing more) — the file must open offline.
 - Typography-driven hierarchy, generous whitespace, restrained accents, soft elevation (subtle shadow + 22–28pt corner radii). Elegance over information density.
-- Visual mock-ups, callouts, flow strips, anatomy diagrams welcome — a great landing report shows the surface, not just describes it.
+- Visual mock-ups, callouts, flow strips, anatomy diagrams welcome — a great deliverable shows the surface, not just describes it.
 
 Markdown deliverables that slip past this rule are a regression — call it out and convert before sharing.
 
