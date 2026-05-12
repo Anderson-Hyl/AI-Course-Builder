@@ -128,7 +128,8 @@ enum AdaptationApplier {
                 recordedReviewItemIDs: recordedReviewItemIDs,
                 recordedArtifactID: artifactID,
                 nextStepKind: proposal.nextStep.kind,
-                nextStepRationale: proposal.nextStep.rationale
+                nextStepRationale: proposal.nextStep.rationale,
+                proposal: proposal
             )
         } catch let error as AdaptationEngineError {
             throw error

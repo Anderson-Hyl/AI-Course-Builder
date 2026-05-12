@@ -57,21 +57,34 @@ public struct SessionWorkspaceFeature {
 
         /// Tracks the post-session adaptation lifecycle. `.idle` until the
         /// learner taps Done; `.running` while `AdaptationEngine.adapt`
-        /// is in flight; `.failed` if it threw (the workspace stays open
-        /// with the error overlay so the learner can retry or skip);
-        /// `.completed` is brief — the dismiss effect fires immediately
-        /// after, but the brief in-state allows a "session adapted"
-        /// banner to flash if a future pass wants one.
+        /// is in flight; `.summary` after success — the workspace pauses
+        /// on the digest card until the learner taps Continue; `.failed`
+        /// if the engine threw (the workspace stays open with an error
+        /// overlay so the learner can retry or skip).
         public var adaptation: AdaptationStatus = .idle
-        /// Adaptation result digest from the most recent `adapt` call.
-        /// Kept for future "Session summary" surfaces; not displayed yet.
+        /// Mirrors the `.summary` payload for callers that need the
+        /// digest without pattern-matching the enum (e.g. read-only UI
+        /// chrome). Set at the same moment `adaptation` flips to
+        /// `.summary` and cleared on dismiss.
         public var adaptationSummary: AdaptationSummary?
 
         public enum AdaptationStatus: Equatable {
             case idle
             case running
-            case completed
+            case summary(AdaptationSummary)
             case failed(String)
+
+            /// True when the lesson surface should be inert (Done button
+            /// disabled, etc.). Both `.running` and `.summary` block
+            /// re-firing adaptation or scrolling back through blocks
+            /// while the workspace is in its "after the session"
+            /// terminal flow.
+            public var blocksLessonInteraction: Bool {
+                switch self {
+                case .running, .summary: true
+                case .idle, .failed: false
+                }
+            }
         }
 
         public init(sessionID: Session.ID) {
@@ -108,7 +121,8 @@ public struct SessionWorkspaceFeature {
         /// session, so we just dismiss without scoring or adapting.
         case exitTapped
         /// Adaptation completed successfully — store the summary and
-        /// dismiss the workspace.
+        /// pause on the digest card. The workspace dismisses only after
+        /// the learner taps Continue (`continueAfterSummaryTapped`).
         case adaptationCompleted(AdaptationSummary)
         /// Adaptation threw. The workspace stays open with the error
         /// overlay; learner picks Retry or Skip.
@@ -119,6 +133,10 @@ public struct SessionWorkspaceFeature {
         /// workspace without re-running adaptation. Session stays in
         /// whatever status it had.
         case adaptationSkipTapped
+        /// Continue button on the adaptation summary card — dismisses
+        /// the workspace and returns the learner to Course Home. The
+        /// session is already marked completed at this point.
+        case continueAfterSummaryTapped
         /// Topbar AI Tutor button / slide-over close-X.
         case tutorToggled
         /// Per-keystroke composer update.
@@ -239,7 +257,11 @@ public struct SessionWorkspaceFeature {
 
             case .adaptationCompleted(let summary):
                 state.adaptationSummary = summary
-                state.adaptation = .completed
+                state.adaptation = .summary(summary)
+                return .none
+
+            case .continueAfterSummaryTapped:
+                state.adaptation = .idle
                 return .send(.delegate(.dismiss))
 
             case .adaptationFailed(let message):

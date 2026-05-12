@@ -149,9 +149,9 @@ public struct AdaptationProposal: Codable, Equatable, Sendable {
 }
 
 /// Engine-side digest returned by `AdaptationEngine.adapt`. Carries the
-/// ids the engine actually wrote so the workspace can surface a
-/// summary toast / sheet ("Marked X complete · scheduled 3 reviews")
-/// without having to re-fetch from disk.
+/// ids the engine actually wrote AND the validated proposal itself so
+/// the Session Workspace can render a per-session digest card on exit
+/// without re-fetching the artifact JSON from disk.
 public struct AdaptationSummary: Sendable, Equatable {
     public let sessionID: UUID
     public let programID: UUID
@@ -162,6 +162,13 @@ public struct AdaptationSummary: Sendable, Equatable {
     public let recordedArtifactID: UUID?
     public let nextStepKind: String
     public let nextStepRationale: String
+    /// The full validated proposal the LLM emitted. Includes
+    /// `outcome.highlights/concerns`, per-concept mastery estimates,
+    /// and per-review flashcard fronts/backs that the workspace
+    /// summary card renders. Kept here (rather than re-decoded from
+    /// the persisted Artifact) so the post-adaptation surface doesn't
+    /// pay an extra DB round-trip.
+    public let proposal: AdaptationProposal
 
     public init(
         sessionID: UUID,
@@ -172,7 +179,8 @@ public struct AdaptationSummary: Sendable, Equatable {
         recordedReviewItemIDs: [UUID],
         recordedArtifactID: UUID?,
         nextStepKind: String,
-        nextStepRationale: String
+        nextStepRationale: String,
+        proposal: AdaptationProposal
     ) {
         self.sessionID = sessionID
         self.programID = programID
@@ -183,5 +191,6 @@ public struct AdaptationSummary: Sendable, Equatable {
         self.recordedArtifactID = recordedArtifactID
         self.nextStepKind = nextStepKind
         self.nextStepRationale = nextStepRationale
+        self.proposal = proposal
     }
 }

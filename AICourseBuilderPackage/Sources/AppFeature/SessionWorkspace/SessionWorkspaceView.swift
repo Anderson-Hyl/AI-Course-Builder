@@ -1,3 +1,4 @@
+import AdaptationEngine
 import ComposableArchitecture
 import Foundation
 import LearningModels
@@ -277,7 +278,7 @@ public struct SessionWorkspaceView: View {
                     .background(theme.accent.primary, in: Capsule())
                 }
                 .buttonStyle(.plain)
-                .disabled(store.adaptation == .running)
+                .disabled(store.adaptation.blocksLessonInteraction)
             } else {
                 Button {
                     store.send(.nextTapped)
@@ -577,12 +578,11 @@ public struct SessionWorkspaceView: View {
 
     // MARK: - Adaptation overlay
 
-    /// Modal overlay shown while `AdaptationEngine.adapt` is in flight or
-    /// after it failed. Blocks workspace interaction so the learner
-    /// can't double-fire adaptation or wander off mid-write. The
-    /// `.completed` branch is intentionally invisible — the dismiss
-    /// effect fires on the same frame that state flips, so the user
-    /// never sees a "completed" overlay.
+    /// Modal overlay shown across the post-session adaptation lifecycle:
+    /// `.running` shows a spinner card, `.summary` shows the LLM-authored
+    /// session digest (the learner taps Continue to dismiss), `.failed`
+    /// shows an error card with Retry / Skip. `.idle` renders nothing so
+    /// the lesson surface stays interactive.
     @ViewBuilder
     private var adaptationOverlay: some View {
         switch store.adaptation {
@@ -664,9 +664,274 @@ public struct SessionWorkspaceView: View {
                 )
             }
             .transition(.opacity)
-        case .idle, .completed:
+        case .summary(let summary):
+            adaptationSummaryOverlay(summary)
+        case .idle:
             EmptyView()
         }
+    }
+
+    private func adaptationSummaryOverlay(_ summary: AdaptationSummary) -> some View {
+        ZStack {
+            theme.surface.cardMuted
+                .opacity(0.85)
+                .ignoresSafeArea()
+            adaptationSummaryCard(summary)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 24)
+        }
+        .transition(.opacity)
+    }
+
+    @ViewBuilder
+    private func adaptationSummaryCard(_ summary: AdaptationSummary) -> some View {
+        let proposal = summary.proposal
+        VStack(alignment: .leading, spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    summaryHeader(proposal)
+                    Text(proposal.outcome.summary)
+                        .font(.system(size: 13.5))
+                        .foregroundStyle(theme.text.primary)
+                        .lineSpacing(2.5)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !proposal.outcome.highlights.isEmpty {
+                        summaryListSection(
+                            title: "What stood out",
+                            items: proposal.outcome.highlights,
+                            tint: theme.state.success
+                        )
+                    }
+                    if !proposal.outcome.concerns.isEmpty {
+                        summaryListSection(
+                            title: "What to keep an eye on",
+                            items: proposal.outcome.concerns,
+                            tint: theme.state.warning
+                        )
+                    }
+                    if !proposal.concepts.isEmpty {
+                        summaryConceptsSection(proposal.concepts)
+                    }
+                    if !proposal.reviewItems.isEmpty {
+                        summaryReviewsSection(proposal.reviewItems)
+                    }
+                    summaryNextStepRow(proposal.nextStep)
+                }
+                .padding(24)
+            }
+            .frame(maxHeight: 520)
+
+            Divider().background(theme.border.subtle)
+
+            HStack {
+                Spacer(minLength: 0)
+                Button {
+                    store.send(.continueAfterSummaryTapped)
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("Continue")
+                            .font(.system(size: 13, weight: .semibold))
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 18)
+                    .frame(height: 36)
+                    .background(theme.accent.primary, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+        }
+        .frame(maxWidth: 480)
+        .background(theme.surface.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(theme.border.subtle, lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private func summaryHeader(_ proposal: AdaptationProposal) -> some View {
+        let (label, color) = completionChipStyle(proposal.outcome.completion)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .tracking(0.6)
+                    .textCase(.uppercase)
+                    .foregroundStyle(color)
+                    .padding(.horizontal, 10)
+                    .frame(height: 22)
+                    .background(color.opacity(0.12), in: Capsule())
+                Spacer(minLength: 0)
+            }
+            Text("Session summary")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(theme.text.primary)
+        }
+    }
+
+    private func completionChipStyle(_ completion: String) -> (String, Color) {
+        switch completion {
+        case AdaptationProposal.Outcome.Completion.completed:
+            ("Completed", theme.state.success)
+        case AdaptationProposal.Outcome.Completion.partial:
+            ("Partial", theme.state.warning)
+        case AdaptationProposal.Outcome.Completion.struggling:
+            ("Struggling", theme.state.danger)
+        default:
+            (completion.capitalized, theme.text.tertiary)
+        }
+    }
+
+    private func summaryListSection(
+        title: String,
+        items: [String],
+        tint: Color
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader(title)
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(items, id: \.self) { item in
+                    HStack(alignment: .top, spacing: 10) {
+                        Circle()
+                            .fill(tint)
+                            .frame(width: 6, height: 6)
+                            .padding(.top, 6)
+                        Text(item)
+                            .font(.system(size: 13))
+                            .foregroundStyle(theme.text.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                    }
+                }
+            }
+        }
+    }
+
+    private func summaryConceptsSection(_ concepts: [AdaptationProposal.Concept]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("Concept signal")
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(concepts, id: \.title) { concept in
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text(concept.title)
+                                .font(.system(size: 12.5, weight: .medium))
+                                .foregroundStyle(theme.text.primary)
+                            Spacer(minLength: 8)
+                            Text("\(Int((concept.masteryEstimate * 100).rounded()))%")
+                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                .foregroundStyle(theme.text.tertiary)
+                        }
+                        masteryBar(level: concept.masteryEstimate)
+                    }
+                }
+            }
+        }
+    }
+
+    private func masteryBar(level: Double) -> some View {
+        let clamped = max(0.0, min(1.0, level))
+        return GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(theme.state.progressTrack)
+                Capsule()
+                    .fill(masteryColor(level: clamped))
+                    .frame(width: max(6, proxy.size.width * clamped))
+            }
+        }
+        .frame(height: 4)
+    }
+
+    private func masteryColor(level: Double) -> Color {
+        if level >= 0.75 { return theme.state.success }
+        if level >= 0.45 { return theme.accent.primary }
+        return theme.state.warning
+    }
+
+    private func summaryReviewsSection(_ items: [AdaptationProposal.ReviewItem]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Reviews scheduled")
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    HStack(spacing: 10) {
+                        Image(systemName: "rectangle.stack.fill")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(theme.accent.primary)
+                            .frame(width: 18)
+                        Text(item.conceptTitle)
+                            .font(.system(size: 12.5))
+                            .foregroundStyle(theme.text.primary)
+                            .lineLimit(1)
+                        Spacer(minLength: 8)
+                        Text(reviewDueLabel(days: item.dueInDays))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(theme.text.tertiary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(theme.surface.cardMuted, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+            }
+        }
+    }
+
+    private func reviewDueLabel(days: Int) -> String {
+        switch days {
+        case 1: "due tomorrow"
+        default: "due in \(days)d"
+        }
+    }
+
+    private func summaryNextStepRow(_ nextStep: AdaptationProposal.NextStep) -> some View {
+        let (label, icon) = nextStepStyle(nextStep.kind)
+        return HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(theme.accent.primary)
+                .frame(width: 18, alignment: .center)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .tracking(0.6)
+                    .textCase(.uppercase)
+                    .foregroundStyle(theme.text.tertiary)
+                Text(nextStep.rationale)
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(theme.text.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.surface.cardMuted, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func nextStepStyle(_ kind: String) -> (String, String) {
+        switch kind {
+        case AdaptationProposal.NextStep.Kind.advance:
+            ("What's next · advance", "arrow.right.circle.fill")
+        case AdaptationProposal.NextStep.Kind.recommendReviewSession:
+            ("What's next · review pass", "rectangle.stack.fill")
+        case AdaptationProposal.NextStep.Kind.recommendRecovery:
+            ("What's next · recovery session", "arrow.uturn.left.circle.fill")
+        default:
+            ("What's next", "arrow.right.circle.fill")
+        }
+    }
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+            .tracking(0.5)
+            .textCase(.uppercase)
+            .foregroundStyle(theme.text.tertiary)
     }
 
     // MARK: - Error
