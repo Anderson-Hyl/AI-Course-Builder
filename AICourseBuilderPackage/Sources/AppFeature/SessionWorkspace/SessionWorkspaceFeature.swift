@@ -3,6 +3,7 @@ import EvaluationEngine
 import Foundation
 import LearningModels
 import LearningRepository
+import TutorEngine
 
 /// Session Workspace — the block-by-block lesson player. Renders one
 /// `SessionBlock` at a time via `LessonRendering.BlockView` and walks
@@ -32,10 +33,26 @@ public struct SessionWorkspaceFeature {
         /// Loaded on `.onAppear`; updated in place after each submit.
         public var attempts: [SessionBlock.ID: Attempt] = [:]
         /// Whether the right-edge AI Tutor slide-over is visible. Default
-        /// `false` so focus mode reads distraction-free. Phase 5.5 will
-        /// wire the panel to a real Tutor engine; for now the content is
-        /// a placeholder + composer stub.
+        /// `false` so focus mode reads distraction-free.
         public var tutorOpen: Bool = false
+        /// Conversation history for the tutor panel. Persists for the
+        /// SessionWorkspace's lifetime (across block navigation + panel
+        /// toggles) — resets when the workspace is dismissed. The
+        /// context handed to `TutorEngine.ask` is rebuilt per send, so
+        /// the model always sees the learner's CURRENT block even when
+        /// the history started on a different one.
+        public var tutorTurns: IdentifiedArrayOf<TutorTurn> = []
+        /// Composer text the learner is typing. Cleared on send; kept
+        /// across panel toggles so a half-typed question survives a
+        /// close + reopen.
+        public var tutorComposerDraft: String = ""
+        /// True while a tutor response is in flight. Used to disable
+        /// the send button + suggested prompts and to drive the
+        /// "thinking" indicator while we wait for the first chunk.
+        public var tutorStreaming: Bool = false
+        /// Last tutor error, surfaced inline below the conversation
+        /// with a retry button. Cleared on the next successful send.
+        public var tutorError: String?
 
         public init(sessionID: Session.ID) {
             self.sessionID = sessionID
@@ -68,6 +85,23 @@ public struct SessionWorkspaceFeature {
         case doneTapped
         /// Topbar AI Tutor button / slide-over close-X.
         case tutorToggled
+        /// Per-keystroke composer update.
+        case tutorComposerChanged(String)
+        /// Composer "send" affordance (button or return key).
+        case tutorSendTapped
+        /// One of the suggested-prompt chips below the empty state.
+        case tutorSuggestedTapped(String)
+        /// Streaming chunk from `TutorEngine.ask`. `text` is cumulative.
+        case tutorChunk(turnID: UUID, text: String)
+        /// `TutorEngine.ask` finished without error.
+        case tutorStreamFinished(turnID: UUID)
+        /// `TutorEngine.ask` threw. The empty placeholder tutor turn is
+        /// removed and `tutorError` is set so the view can surface a
+        /// retry affordance.
+        case tutorStreamFailed(turnID: UUID, message: String)
+        /// User tapped the retry button in the inline error bubble.
+        /// Resends the last user turn against the current context.
+        case tutorRetryTapped
         /// User picked an option in a `multiple_choice` block. The
         /// reducer evaluates deterministically + persists; the render
         /// updates from the persisted `Attempt` so the UI shows the
@@ -84,6 +118,12 @@ public struct SessionWorkspaceFeature {
     }
 
     @Dependency(\.learningRepository) var repository
+    @Dependency(\.tutorEngine) var tutorEngine
+    @Dependency(\.uuid) var uuid
+
+    private enum CancelID: Hashable {
+        case tutorStream
+    }
 
     public init() {}
 
@@ -128,11 +168,55 @@ public struct SessionWorkspaceFeature {
                 return .none
 
             case .doneTapped:
-                return .send(.delegate(.dismiss))
+                state.tutorStreaming = false
+                return .merge(
+                    .cancel(id: CancelID.tutorStream),
+                    .send(.delegate(.dismiss))
+                )
 
             case .tutorToggled:
                 state.tutorOpen.toggle()
                 return .none
+
+            case .tutorComposerChanged(let text):
+                state.tutorComposerDraft = text
+                return .none
+
+            case .tutorSendTapped:
+                return startTutorTurn(text: state.tutorComposerDraft, state: &state)
+
+            case .tutorSuggestedTapped(let prompt):
+                return startTutorTurn(text: prompt, state: &state)
+
+            case .tutorChunk(let turnID, let text):
+                if let index = state.tutorTurns.index(id: turnID) {
+                    state.tutorTurns[index].text = text
+                }
+                return .none
+
+            case .tutorStreamFinished:
+                state.tutorStreaming = false
+                return .none
+
+            case .tutorStreamFailed(let turnID, let message):
+                state.tutorStreaming = false
+                state.tutorError = message
+                state.tutorTurns.remove(id: turnID)
+                return .none
+
+            case .tutorRetryTapped:
+                state.tutorError = nil
+                guard let lastUser = state.tutorTurns.reversed().first(where: { $0.role == .user })
+                else { return .none }
+                while let last = state.tutorTurns.last, last.id != lastUser.id {
+                    state.tutorTurns.removeLast()
+                }
+                let tutorTurn = TutorTurn(id: uuid(), role: .tutor, text: "")
+                state.tutorTurns.append(tutorTurn)
+                state.tutorStreaming = true
+                let turns = Array(state.tutorTurns)
+                let context = Self.makeContext(state: state)
+                return streamTutor(turns: turns, context: context, targetID: tutorTurn.id)
 
             case .multipleChoiceSelected(let blockID, let index):
                 guard let block = state.blocks.first(where: { $0.id == blockID }),
@@ -203,5 +287,63 @@ public struct SessionWorkspaceFeature {
     private static func encodeJSON<T: Encodable>(_ value: T) throws -> String {
         let data = try JSONEncoder().encode(value)
         return String(decoding: data, as: UTF8.self)
+    }
+
+    private func startTutorTurn(text rawText: String, state: inout State) -> Effect<Action> {
+        let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return .none }
+        let userTurn = TutorTurn(id: uuid(), role: .user, text: text)
+        let tutorTurn = TutorTurn(id: uuid(), role: .tutor, text: "")
+        state.tutorTurns.append(userTurn)
+        state.tutorTurns.append(tutorTurn)
+        state.tutorComposerDraft = ""
+        state.tutorError = nil
+        state.tutorStreaming = true
+        let turns = Array(state.tutorTurns)
+        let context = Self.makeContext(state: state)
+        return streamTutor(turns: turns, context: context, targetID: tutorTurn.id)
+    }
+
+    private func streamTutor(
+        turns: [TutorTurn],
+        context: TutorContext,
+        targetID: UUID
+    ) -> Effect<Action> {
+        .run { [tutorEngine] send in
+            do {
+                for try await chunk in tutorEngine.ask(turns, context) {
+                    switch chunk {
+                    case .text(let cumulative):
+                        await send(.tutorChunk(turnID: targetID, text: cumulative))
+                    case .done:
+                        await send(.tutorStreamFinished(turnID: targetID))
+                    }
+                }
+            } catch is CancellationError {
+                // Stream was cancelled by a newer send or workspace dismiss —
+                // don't surface as a failure.
+            } catch {
+                let message = (error as? LocalizedError)?.errorDescription
+                    ?? error.localizedDescription
+                await send(.tutorStreamFailed(turnID: targetID, message: message))
+            }
+        }
+        .cancellable(id: CancelID.tutorStream, cancelInFlight: true)
+    }
+
+    private static func makeContext(state: State) -> TutorContext {
+        let position: String
+        if state.blocks.isEmpty {
+            position = "(session still loading)"
+        } else {
+            position = "Block \(state.currentBlockIndex + 1) of \(state.blocks.count)"
+        }
+        return TutorContext(
+            sessionTitle: state.session?.title ?? "Session",
+            sessionObjective: state.session?.objective ?? "",
+            currentBlockKind: state.currentBlock?.kind,
+            currentBlockPayloadJSON: state.currentBlock?.payloadJSON,
+            blockPositionDescription: position
+        )
     }
 }

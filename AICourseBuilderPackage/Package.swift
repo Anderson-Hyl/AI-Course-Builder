@@ -107,6 +107,10 @@ let package = Package(
                 "LearningModels",
                 "ChatClients",
                 .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies"),
+            ],
+            resources: [
+                .process("Resources"),
             ]
         ),
         .target(
@@ -126,6 +130,7 @@ let package = Package(
                 "LessonRendering",
                 "EvaluationEngine",
                 "PlanningEngine",
+                "TutorEngine",
                 "ChatClients",
                 .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
                 .product(name: "SQLiteData", package: "sqlite-data"),

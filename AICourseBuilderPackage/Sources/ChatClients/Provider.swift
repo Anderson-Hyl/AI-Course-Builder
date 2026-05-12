@@ -92,4 +92,13 @@ extension LanguageModel {
         return .claudeOpus47
         #endif
     }
+
+    /// Platform-default model the `TutorEngine` calls. Currently aliases
+    /// `defaultPlanningModel` so both engines share the macOS-CLI /
+    /// iPad-Anthropic split; kept as its own accessor so a future pass
+    /// can drop the tutor to a faster/cheaper model (e.g. Haiku) without
+    /// touching the planning path.
+    public static var defaultTutorModel: LanguageModel {
+        defaultPlanningModel
+    }
 }

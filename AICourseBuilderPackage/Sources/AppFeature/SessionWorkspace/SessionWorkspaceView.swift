@@ -4,6 +4,7 @@ import LearningModels
 import LearningUI
 import LessonRendering
 import SwiftUI
+import TutorEngine
 
 /// Session Workspace — App Structure v2's focus mode. Renders a
 /// `Shell(focus: true)` so the topbar shrinks to 48pt and the sidebar
@@ -309,36 +310,11 @@ public struct SessionWorkspaceView: View {
 
     private var tutorPanel: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                HStack(spacing: 8) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(theme.accent.primary)
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.white)
-                    }
-                    .frame(width: 28, height: 28)
-                    Text("AI Tutor")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(theme.text.primary)
-                }
-                Spacer(minLength: 0)
-                Button {
-                    store.send(.tutorToggled)
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(theme.text.tertiary)
-                        .frame(width: 22, height: 22)
-                }
-                .buttonStyle(.plain)
+            tutorPanelHeader
+            tutorScroll
+            if let error = store.tutorError {
+                tutorErrorBubble(error)
             }
-
-            tutorTurnsList
-
-            Spacer(minLength: 0)
-
             tutorComposer
         }
         .padding(.horizontal, 22)
@@ -346,14 +322,75 @@ public struct SessionWorkspaceView: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
-    private var tutorTurnsList: some View {
+    private var tutorPanelHeader: some View {
+        HStack {
+            HStack(spacing: 8) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(theme.accent.primary)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 28, height: 28)
+                Text("AI Tutor")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(theme.text.primary)
+            }
+            Spacer(minLength: 0)
+            Button {
+                store.send(.tutorToggled)
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(theme.text.tertiary)
+                    .frame(width: 22, height: 22)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var tutorScroll: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if store.tutorTurns.isEmpty {
+                        tutorEmptyState
+                    } else {
+                        ForEach(store.tutorTurns) { turn in
+                            tutorTurnView(turn)
+                                .id(turn.id)
+                        }
+                        if isWaitingForFirstChunk {
+                            tutorThinkingIndicator
+                                .id("tutor-thinking")
+                        }
+                    }
+                    Color.clear.frame(height: 1).id("tutor-bottom")
+                }
+                .padding(.bottom, 4)
+            }
+            .scrollIndicators(.hidden)
+            .onChange(of: store.tutorTurns.count) { _, _ in
+                proxy.scrollTo("tutor-bottom", anchor: .bottom)
+            }
+            .onChange(of: store.tutorTurns.last?.text) { _, _ in
+                proxy.scrollTo("tutor-bottom", anchor: .bottom)
+            }
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    private var tutorEmptyState: some View {
         VStack(alignment: .leading, spacing: 12) {
             tutorAssistantBubble(
-                "Tap a question below to ask the tutor about this lesson, or send your own. (Hooking the panel to a real model lands next.)"
+                "Tap a question below to ask the tutor about this lesson, or send your own."
             )
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(suggestedPrompts, id: \.self) { prompt in
-                    Button {} label: {
+                    Button {
+                        store.send(.tutorSuggestedTapped(prompt))
+                    } label: {
                         Text(prompt)
                             .font(.system(size: 12))
                             .foregroundStyle(theme.text.secondary)
@@ -366,6 +403,7 @@ public struct SessionWorkspaceView: View {
                             )
                     }
                     .buttonStyle(.plain)
+                    .disabled(store.tutorStreaming)
                 }
             }
         }
@@ -375,8 +413,39 @@ public struct SessionWorkspaceView: View {
         ["Show me another example", "Why does this work?", "Quiz me on this"]
     }
 
-    private func tutorAssistantBubble(_ text: String) -> some View {
+    /// True when the latest turn is a tutor turn whose text hasn't
+    /// arrived yet — drives the "thinking" indicator.
+    private var isWaitingForFirstChunk: Bool {
+        guard store.tutorStreaming, let last = store.tutorTurns.last else { return false }
+        return last.role == .tutor && last.text.isEmpty
+    }
+
+    @ViewBuilder
+    private func tutorTurnView(_ turn: TutorTurn) -> some View {
+        switch turn.role {
+        case .user:
+            tutorUserBubble(turn.text)
+        case .tutor:
+            if !turn.text.isEmpty {
+                tutorAssistantBubble(turn.text)
+            }
+        }
+    }
+
+    private func tutorUserBubble(_ text: String) -> some View {
         Text(text)
+            .font(.system(size: 12.5))
+            .foregroundStyle(.white)
+            .lineSpacing(2)
+            .padding(14)
+            .frame(maxWidth: 280, alignment: .topTrailing)
+            .multilineTextAlignment(.leading)
+            .background(theme.accent.primary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+
+    private func tutorAssistantBubble(_ text: String) -> some View {
+        Text(attributedTutorBody(text))
             .font(.system(size: 12.5))
             .foregroundStyle(theme.text.secondary)
             .lineSpacing(2)
@@ -389,26 +458,113 @@ public struct SessionWorkspaceView: View {
             )
     }
 
-    private var tutorComposer: some View {
+    /// Best-effort Markdown rendering for streamed tutor responses. The
+    /// system prompt restricts the model to light Markdown (paragraphs,
+    /// inline code, short lists) so the limited inline-Markdown parser
+    /// in `AttributedString(markdown:)` covers the common case. Falls
+    /// back to plain text on parse failure so a partial chunk mid-fence
+    /// never empties the bubble.
+    private func attributedTutorBody(_ text: String) -> AttributedString {
+        var options = AttributedString.MarkdownParsingOptions()
+        options.interpretedSyntax = .inlineOnlyPreservingWhitespace
+        return (try? AttributedString(markdown: text, options: options))
+            ?? AttributedString(text)
+    }
+
+    private var tutorThinkingIndicator: some View {
         HStack(spacing: 8) {
-            Text("Ask about this lesson…")
-                .font(.system(size: 12.5))
+            ProgressView()
+                .controlSize(.small)
+            Text("Tutor is thinking…")
+                .font(.system(size: 12))
                 .foregroundStyle(theme.text.tertiary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            ZStack {
-                Circle().fill(theme.accent.primary)
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(theme.border.subtle, lineWidth: 1)
+        )
+    }
+
+    private func tutorErrorBubble(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(theme.state.danger)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(message)
+                    .font(.system(size: 12))
+                    .foregroundStyle(theme.text.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button {
+                    store.send(.tutorRetryTapped)
+                } label: {
+                    Text("Retry")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(theme.accent.primary)
+                }
+                .buttonStyle(.plain)
+                .disabled(store.tutorStreaming)
             }
-            .frame(width: 28, height: 28)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.state.dangerSoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var tutorComposer: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            TextField(
+                "Ask about this lesson…",
+                text: tutorDraftBinding,
+                axis: .vertical
+            )
+            .textFieldStyle(.plain)
+            .font(.system(size: 12.5))
+            .foregroundStyle(theme.text.primary)
+            .lineLimit(1...4)
+            .submitLabel(.send)
+            .onSubmit {
+                store.send(.tutorSendTapped)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                store.send(.tutorSendTapped)
+            } label: {
+                ZStack {
+                    Circle().fill(canSendTutorMessage ? theme.accent.primary : theme.surface.cardMuted)
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(canSendTutorMessage ? .white : theme.text.tertiary)
+                }
+                .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .disabled(!canSendTutorMessage)
         }
         .padding(.horizontal, 12)
-        .frame(height: 44)
+        .padding(.vertical, 8)
         .background(theme.surface.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(theme.border.regular, lineWidth: 1)
+        )
+    }
+
+    private var canSendTutorMessage: Bool {
+        !store.tutorStreaming
+            && !store.tutorComposerDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var tutorDraftBinding: Binding<String> {
+        Binding(
+            get: { store.tutorComposerDraft },
+            set: { store.send(.tutorComposerChanged($0)) }
         )
     }
 

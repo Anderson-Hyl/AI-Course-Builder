@@ -30,8 +30,8 @@ One top-level `.xcworkspace` composing `AICourseBuilder.xcodeproj` (xcodegen-man
   - `PlanningEngine` — goal → blueprint, stage expansion. **Placeholder this pass** — wires to LLM next pass.
   - `EvaluationEngine` — attempt scoring + competency delta. **Placeholder this pass**.
   - `AdaptationEngine` — next-step decisions, review insertion, recovery sessions. **Placeholder this pass**.
-  - `TutorEngine` — hints, reframings, encouragement. **Placeholder this pass**.
-  - `ChatClients` — `ChatClient` abstraction over Anthropic API + Claude Code CLI. **Placeholder this pass** — first Anthropic call ships with `PlanningEngine`'s real implementation.
+  - `TutorEngine` — `TutorEngine.ask(turns:context:)` streams hints / reframings / encouragement from `ChatClient` for the Session Workspace's slide-over panel. Plain prose (no forced tool call). System prompt at `Resources/TutorPrompt.txt` enforces "guide, don't reveal answers."
+  - `ChatClients` — `ChatClient` abstraction over Anthropic API + Claude Code CLI. Live: both providers + `APIKeyStore`. `PlanningEngine` and `TutorEngine` both call through here.
   - `AppFeature` — coordinator reducer and all screen-level views. Routes by an `AppScope` enum (`.library` / `.newCourse` / `.course(goalID)`) on top of the transient bootstrap / planning / outline gates. Hosts: `LibraryView`, `NewCourseSheetView`, `CourseHomeView`, `SessionWorkspaceView`, `APIKeySheetView`. Plus the legacy `PlanningProgressView` + `PlanningErrorView` + `ProgramPreviewView` for non-modal planning paths.
 
 ## Data model
@@ -97,7 +97,7 @@ When the next pass lands:
 
 - One `ChatClient` abstraction returning `AsyncThrowingStream<ChatEvent>` where `ChatEvent` is `.text(String) | .toolCall(...) | .done(TurnSummary)`.
 - Two providers behind it: **`AnthropicChatClient`** (URLSession + SSE, runs everywhere, used by the iPad shipping target) and **`ClaudeCodeChatClient`** (`#if os(macOS)`, spawns `claude --print --output-format stream-json --mcp-config <inline>`, dev convenience). Same provider-agnostic tool catalog on both.
-- **Engines own LLM calls.** `PlanningEngine.generateBlueprint(goal:)`, `EvaluationEngine.score(attempt:against:)`, `AdaptationEngine.next(after:)`, `TutorEngine.hint(for:)` each call the relevant `ChatClient` method internally. **There is NO chat drawer.** The LLM is invisible to the user except through the structured content it produces and the tutor-panel responses inside the Session Workspace.
+- **Engines own LLM calls.** `PlanningEngine.generateBlueprint(goal:)`, `EvaluationEngine.score(attempt:against:)`, `AdaptationEngine.next(after:)`, `TutorEngine.ask(turns:context:)` each call the relevant `ChatClient` method internally. **There is NO chat drawer.** The LLM is invisible to the user except through the structured content it produces and the tutor-panel responses inside the Session Workspace.
 - **Structured outputs are mandatory.** Every LLM response is a typed JSON object validated against the block schema (`schemaVersion` enforced, unknown block kinds rejected). Hallucinated structure surfaces a parse error and a retry, not a silent fallback.
 - **Provider keys** live in UserDefaults under `com.aicoursebuilder.provider-keys.<id>` initially (matches SlideFlow rationale: ad-hoc-signed dev builds get volatile code identities that orphan Keychain items). Migrate to Keychain once Developer ID lands.
 
@@ -198,7 +198,7 @@ CLAUDE.md is the **engineering** bible; the four above are the **product/archite
 
 Carried over from the bootstrap pass:
 
-- **AdaptationEngine + TutorEngine** (HIGH). `PlanningEngine` and `EvaluationEngine` ship live; the other two stay placeholders. AdaptationEngine wires after a few sessions worth of attempts exist; TutorEngine wires when the Session Workspace's Tutor slide-over gets a real model behind it (currently a static placeholder).
+- **AdaptationEngine** (HIGH). `PlanningEngine`, `EvaluationEngine`, and `TutorEngine` ship live; AdaptationEngine stays placeholder. Wires after a few sessions worth of attempts exist to drive next-step decisions, review insertion, and recovery sessions.
 - **Review Vault** (MEDIUM). The Course Home rail shows a placeholder "no items yet" card; spaced-repetition queue logic lands when `ReviewItem` is wired through.
 - **`UIComponents` design system** (MEDIUM). The new `LearningUI/Shell` primitives (Shell / Topbar / Sidebar / NavItem) cover the v2 chrome. Wider design-system adoption (deep Theme bindings, motion tokens) lands when the remote UIComponents library is integrated.
 - **Tests** (MEDIUM). Test target stub exists in `Package.swift` but no test bodies. First tests cover `SessionBlock` payload encode/decode + `LearningRepository` round-trips per `ARCHITECTURE.md §13`.
