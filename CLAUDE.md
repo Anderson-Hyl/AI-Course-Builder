@@ -146,16 +146,37 @@ This pass uses plain SwiftUI + system colors so the bootstrap stays small. The n
 
 ## Artifact format
 
-When you produce a deliverable for me to look at — status reports, design proposals, end-of-pass walkthroughs, comparison tables, screen mockups, anything I'll *read once and react to* — render it as a beautiful, self-contained **HTML file** under `design/`. Match `design/mvp-design-board.html`:
+**Default**: any artifact a human will read is a beautiful, self-contained **HTML file** under `design/`. Markdown is reserved for artifacts a model will read.
+
+This is a hard rule, not a suggestion. Reaching for markdown to summarize finished work is the wrong shape — render it as HTML and put it in `design/` so the user can open it directly in a browser. If you started from a markdown scratchpad (a plan file, a checklist, a draft summary) and the work is now landing for human review, the deliverable is HTML; the markdown stays as your private working notes.
+
+**Human-audience artifacts → HTML under `design/`**:
+- End-of-pass landing reports and walkthroughs ("here's what shipped").
+- Status reports, design proposals, feature briefs.
+- Comparison tables, before/after diagrams, screen mockups.
+- Anything the user will *read once and react to* — even something as small as a one-page progress summary.
+- A converted plan file once the planned work has landed (the HTML is the deliverable, the original markdown plan is a scratchpad).
+
+**Model-audience artifacts → markdown**:
+- Engineering bibles (this file), `ARCHITECTURE.md`, `PRD.md`, `AGENTS.md`.
+- Prompts, system instructions, tool schemas (when not JSON).
+- Code comments, in-source docs.
+- Task lists, plan files actively being executed against.
+- Anything a future session will grep, diff, or splice into a tool call.
+
+Quick test: *human* is the audience → HTML. *Model* is the audience → markdown.
+
+### HTML file requirements
+
+Match `design/mvp-design-board.html` and `design/session-summary-surface.html` for the canonical shape:
 
 - One inline `<style>` block driven by CSS custom properties whose names mirror `LearningUI/Theme/CourseBuilderThemePalette.swift` (`--app-canvas`, `--page`, `--sidebar`, `--card`, `--accent`, `--text-primary`, `--text-secondary`, `--success`, `--warning`, `--danger`, …). No inline color literals — always reach for the token.
-- Light/dark via a `data-theme="light"` attribute on `<html>`; provide both swatches in `:root` and `[data-theme="dark"]`.
-- System fonts only (`ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`; `ui-monospace, "JetBrains Mono", Menlo, monospace` for code). No Google Fonts, no CDN, no JS dependencies — the file must open offline.
+- Light/dark via a `data-theme="light"` attribute on `<html>`; provide both swatches in `:root` and `[data-theme="dark"]`. Include a small toggle button so the user can flip themes inline.
+- System fonts only (`ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`; `ui-monospace, "JetBrains Mono", Menlo, monospace` for code). No Google Fonts, no CDN, no JS dependencies (a tiny inline `onclick` for the theme toggle is fine; nothing more) — the file must open offline.
 - Typography-driven hierarchy, generous whitespace, restrained accents, soft elevation (subtle shadow + 22–28pt corner radii). Elegance over information density.
+- Visual mock-ups, callouts, flow strips, anatomy diagrams welcome — a great landing report shows the surface, not just describes it.
 
-When the artifact is for *you* — engineering bibles like this file, task lists, prompts, system instructions, code comments, anything a model reads in a future session — keep it clean **markdown**. Markdown is faster to grep, easier to diff, and HTML overhead buys nothing for a model audience.
-
-Quick test: human is the audience → HTML. Model is the audience → markdown.
+Markdown deliverables that slip past this rule are a regression — call it out and convert before sharing.
 
 ## Build gotchas
 
